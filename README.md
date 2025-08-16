@@ -135,6 +135,24 @@ http://router-ip/page-reloader/
 - **📋 Logs**: View system logs in real-time
 - **⚙️ Settings**: Service control, auto-start, export/import
 
+### GUI Troubleshooting
+
+If buttons don't work in web interface:
+
+```bash
+# Run GUI fix script
+./fix-gui.sh
+
+# Or manual fixes:
+chmod +x /www/cgi-bin/page-reloader-api
+uci set uhttpd.main.cgi_prefix='/cgi-bin'
+uci commit uhttpd
+/etc/init.d/uhttpd restart
+
+# Test CGI manually
+curl 'http://localhost/cgi-bin/page-reloader-api?action=status'
+```
+
 ### Mobile Support
 
 GUI সম্পূর্ণভাবে mobile responsive - phone/tablet থেকে ব্যবহার করা যায়।

@@ -2,9 +2,12 @@
 # Page Reloader CGI API
 # Lightweight backend for web interface
 
-# Set content type
+# Set content type and CORS headers
 echo "Content-Type: application/json"
 echo "Cache-Control: no-cache"
+echo "Access-Control-Allow-Origin: *"
+echo "Access-Control-Allow-Methods: GET, POST, OPTIONS"
+echo "Access-Control-Allow-Headers: Content-Type"
 echo ""
 
 # Configuration
@@ -12,15 +15,25 @@ SCRIPT_PATH="/usr/bin/page-reloader"
 CONFIG_FILE="/etc/page-reloader/config"
 LOG_FILE="/var/log/page-reloader.log"
 
+# Handle preflight OPTIONS request
+if [ "$REQUEST_METHOD" = "OPTIONS" ]; then
+    exit 0
+fi
+
 # Parse query parameters
 if [ "$REQUEST_METHOD" = "GET" ]; then
     QUERY="$QUERY_STRING"
 elif [ "$REQUEST_METHOD" = "POST" ]; then
     # Read POST data
-    if [ -n "$CONTENT_LENGTH" ]; then
-        read -n "$CONTENT_LENGTH" QUERY
+    if [ -n "$CONTENT_LENGTH" ] && [ "$CONTENT_LENGTH" -gt 0 ]; then
+        QUERY=$(dd bs=1 count="$CONTENT_LENGTH" 2>/dev/null)
+    else
+        QUERY="$QUERY_STRING"
     fi
 fi
+
+# Debug logging
+echo "$(date): METHOD=$REQUEST_METHOD, QUERY=$QUERY" >> /tmp/api-debug.log
 
 # Function to parse parameters
 get_param() {

@@ -5,6 +5,7 @@ class PageReloaderGUI {
     constructor() {
         this.apiUrl = '/cgi-bin/page-reloader-api';
         this.refreshInterval = null;
+        this.fallbackMode = false;
         this.init();
     }
 
@@ -37,34 +38,56 @@ class PageReloaderGUI {
     // API Communication
     async apiCall(endpoint, method = 'GET', data = null) {
         try {
+            let url = `${this.apiUrl}?action=${endpoint}`;
             const options = {
                 method: method,
                 headers: {
                     'Content-Type': 'application/x-www-form-urlencoded',
-                }
+                },
+                credentials: 'same-origin'
             };
 
             if (data && method !== 'GET') {
-                options.body = new URLSearchParams(data).toString();
+                const params = new URLSearchParams(data);
+                if (method === 'POST') {
+                    options.body = params.toString();
+                } else {
+                    url += '&' + params.toString();
+                }
             }
 
-            const response = await fetch(`${this.apiUrl}?action=${endpoint}`, options);
+            console.log('API Call:', method, url, data);
+
+            const response = await fetch(url, options);
+            
+            console.log('API Response:', response.status, response.statusText);
             
             if (!response.ok) {
                 throw new Error(`HTTP error! status: ${response.status}`);
             }
             
             const text = await response.text();
+            console.log('API Text:', text);
             
             try {
-                return JSON.parse(text);
+                const result = JSON.parse(text);
+                console.log('API Result:', result);
+                return result;
             } catch (e) {
+                console.log('Non-JSON response:', text);
                 // If response is not JSON, return as text
                 return { success: true, message: text };
             }
         } catch (error) {
             console.error('API Error:', error);
-            this.showAlert('Error: ' + error.message, 'danger');
+            
+            // Enable fallback mode
+            if (!this.fallbackMode) {
+                this.fallbackMode = true;
+                this.showAlert('CGI API not available. Switching to fallback mode. Some features may be limited.', 'warning');
+                this.enableFallbackMode();
+            }
+            
             return { success: false, error: error.message };
         }
     }
@@ -598,6 +621,64 @@ class PageReloaderGUI {
         const div = document.createElement('div');
         div.textContent = text;
         return div.innerHTML;
+    }
+
+    // Fallback mode when CGI doesn't work
+    enableFallbackMode() {
+        console.log('Enabling fallback mode');
+        
+        // Show manual instructions
+        const fallbackHtml = `
+            <div class="alert alert-warning">
+                <h4>⚠️ CGI API Not Available</h4>
+                <p>The web interface API is not working. Use these manual commands on your router:</p>
+                
+                <h5>SSH to Router:</h5>
+                <code>ssh root@router-ip</code>
+                
+                <h5>Common Commands:</h5>
+                <pre>
+# Add URL
+page-reloader add-url "https://example.com"
+
+# Set interval
+page-reloader set-url-interval "https://example.com" 600
+
+# Start service
+/etc/init.d/page-reloader start
+
+# Check status
+page-reloader status
+page-reloader list-urls
+
+# View logs
+page-reloader logs
+                </pre>
+                
+                <h5>TaskTreasure Quick Setup:</h5>
+                <pre>
+page-reloader add-url "https://tasktreasure-otp1.onrender.com"
+page-reloader set-preset tasktreasure
+page-reloader start
+                </pre>
+            </div>
+        `;
+        
+        // Replace dashboard content
+        const dashboard = document.getElementById('dashboard');
+        if (dashboard) {
+            dashboard.innerHTML = fallbackHtml;
+        }
+        
+        // Disable buttons that require API
+        const buttons = document.querySelectorAll('button');
+        buttons.forEach(button => {
+            if (button.onclick && button.textContent.includes('Add') || button.textContent.includes('Start') || button.textContent.includes('Stop')) {
+                button.disabled = true;
+                button.style.opacity = '0.5';
+                button.title = 'Not available - use manual commands';
+            }
+        });
     }
 }
 

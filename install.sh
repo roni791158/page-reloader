@@ -119,13 +119,24 @@ install_web_gui() {
             print_msg "${GREEN}API backend installed${NC}"
         fi
         
+        # Configure CGI support
+        print_msg "${BLUE}Configuring CGI support...${NC}"
+        if command -v uci >/dev/null 2>&1; then
+            uci set uhttpd.main.cgi_prefix='/cgi-bin' >/dev/null 2>&1
+            uci commit uhttpd >/dev/null 2>&1
+        fi
+        
         # Check if uhttpd is running (OpenWrt web server)
         if pgrep uhttpd >/dev/null 2>&1; then
             print_msg "${GREEN}Web server is running${NC}"
+            # Restart to apply CGI config
+            /etc/init.d/uhttpd restart >/dev/null 2>&1
             print_msg "${BLUE}GUI will be available at: http://router-ip/page-reloader/${NC}"
         else
             print_msg "${YELLOW}Warning: Web server (uhttpd) not running${NC}"
-            print_msg "${BLUE}Install uhttpd: opkg install uhttpd${NC}"
+            print_msg "${BLUE}Starting web server...${NC}"
+            /etc/init.d/uhttpd start >/dev/null 2>&1
+            /etc/init.d/uhttpd enable >/dev/null 2>&1
         fi
     else
         print_msg "${YELLOW}Web GUI not available (missing web-gui directory)${NC}"
