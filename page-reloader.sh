@@ -258,6 +258,13 @@ add_url() {
     else
         log "${YELLOW}⚠ URL is not currently accessible${NC}"
     fi
+    
+    # Auto-restart service if running to apply new URL
+    if is_service_running; then
+        log "${BLUE}Service is running. Restarting to apply new URL...${NC}"
+        restart_service
+        log "${GREEN}Service restarted successfully${NC}"
+    fi
 }
 
 # Remove URL from configuration
@@ -463,7 +470,14 @@ set_interval() {
         log "${GREEN}Default check interval set to: ${seconds} seconds${NC}"
     fi
     
-    log "${BLUE}Restart service to apply changes: page-reloader restart${NC}"
+    # Auto-restart service if running to apply new interval
+    if is_service_running; then
+        log "${BLUE}Service is running. Restarting to apply new interval...${NC}"
+        restart_service
+        log "${GREEN}Service restarted successfully${NC}"
+    else
+        log "${BLUE}Start service to apply changes: page-reloader start${NC}"
+    fi
 }
 
 # Set URL-specific interval
@@ -533,7 +547,14 @@ set_url_interval() {
         log "${GREEN}Set interval for $url: ${seconds} seconds${NC}"
     fi
     
-    log "${BLUE}Restart service to apply changes: page-reloader restart${NC}"
+    # Auto-restart service if running to apply new URL interval
+    if is_service_running; then
+        log "${BLUE}Service is running. Restarting to apply new URL interval...${NC}"
+        restart_service
+        log "${GREEN}Service restarted successfully${NC}"
+    else
+        log "${BLUE}Start service to apply changes: page-reloader start${NC}"
+    fi
 }
 
 # Remove URL-specific interval (revert to default)
@@ -590,7 +611,15 @@ set_timeout() {
     sed -i "s|^TIMEOUT=.*|TIMEOUT=$timeout|" "$CONFIG_FILE"
     
     log "${GREEN}Connection timeout set to: ${timeout} seconds${NC}"
-    log "${BLUE}Restart service to apply changes: page-reloader restart${NC}"
+    
+    # Auto-restart service if running to apply new timeout
+    if is_service_running; then
+        log "${BLUE}Service is running. Restarting to apply new timeout...${NC}"
+        restart_service
+        log "${GREEN}Service restarted successfully${NC}"
+    else
+        log "${BLUE}Start service to apply changes: page-reloader start${NC}"
+    fi
 }
 
 # Show current timing settings
