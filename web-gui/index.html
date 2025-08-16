@@ -230,7 +230,7 @@
             <div class="row">
                 <div class="col">
                     <h3>Add URL</h3>
-                    <input type="url" id="quick-url" class="form-control" placeholder="https://tasktreasure-otp1.onrender.com" value="https://tasktreasure-otp1.onrender.com">
+                    <input type="url" id="quick-url" class="form-control" placeholder="https://example.com">
                     <button class="btn btn-primary" onclick="quickAddUrl()" style="margin-top: 10px;">➕ Add URL</button>
                 </div>
                 <div class="col">
@@ -242,9 +242,9 @@
             </div>
             
             <div class="alert alert-info">
-                <h4>🎯 TaskTreasure Setup</h4>
-                <p>Click "Add URL" above to add TaskTreasure with 10-minute monitoring interval.</p>
-                <p>Or use the Manual Commands tab for SSH commands.</p>
+                <h4>📊 Page Reloader Dashboard</h4>
+                <p>Add URLs to monitor and control the service from this interface.</p>
+                <p>Use the Manual Commands tab for advanced SSH commands.</p>
             </div>
             
             <div id="status-display"></div>
@@ -262,9 +262,9 @@
             <h3>SSH to Router:</h3>
             <pre style="background: #f8f9fa; padding: 15px; border-radius: 8px;">ssh root@192.168.1.1</pre>
             
-            <h3>TaskTreasure Quick Setup:</h3>
-            <pre style="background: #f8f9fa; padding: 15px; border-radius: 8px;">page-reloader add-url "https://tasktreasure-otp1.onrender.com"
-page-reloader set-preset tasktreasure
+            <h3>Quick Setup Example:</h3>
+            <pre style="background: #f8f9fa; padding: 15px; border-radius: 8px;">page-reloader add-url "https://example.com"
+page-reloader set-interval 600
 page-reloader start
 page-reloader status</pre>
             
@@ -291,7 +291,7 @@ page-reloader logs
 page-reloader set-preset fast        # 15 seconds
 page-reloader set-preset normal      # 30 seconds
 page-reloader set-preset slow        # 60 seconds
-page-reloader set-preset tasktreasure # 600 seconds, 30s timeout</pre>
+page-reloader set-preset very-slow   # 300 seconds (5 minutes)</pre>
             
             <h3>GUI Fix Commands:</h3>
             <pre style="background: #f8f9fa; padding: 15px; border-radius: 8px;"># Download and run GUI fix
@@ -427,15 +427,7 @@ chmod +x update-router.sh
             
             try {
                 await apiCall('add-url', { url });
-                
-                // Apply TaskTreasure preset for the specific URL
-                if (url.includes('tasktreasure')) {
-                    await apiCall('set-preset', { preset: 'tasktreasure' });
-                    showAlert('TaskTreasure URL added with 10-minute monitoring!', 'success');
-                } else {
-                    showAlert('URL added successfully!', 'success');
-                }
-                
+                showAlert('URL added successfully!', 'success');
                 updateStatus();
             } catch (error) {
                 showAlert(`Failed to add URL. Use manual command: page-reloader add-url "${url}"`, 'danger');
@@ -448,18 +440,53 @@ chmod +x update-router.sh
                 const status = await apiCall('status');
                 const urls = await apiCall('list-urls');
                 
+                // Parse service status
+                const isRunning = status.data && status.data.includes('running');
+                const serviceStatusText = isRunning ? '🟢 Running' : '🔴 Stopped';
+                const serviceClass = isRunning ? 'alert-success' : 'alert-danger';
+                
+                // Parse URLs
+                const urlLines = urls.data.split('\n').filter(line => line.trim() && line.includes('http'));
+                const urlCount = urlLines.length;
+                
                 const statusDisplay = document.getElementById('status-display');
                 statusDisplay.innerHTML = `
-                    <div class="alert alert-info">
-                        <h4>📊 Current Status</h4>
-                        <pre>${status.data}</pre>
-                        <h5>📝 URLs:</h5>
-                        <pre>${urls.data}</pre>
+                    <div class="row">
+                        <div class="col">
+                            <div class="alert ${serviceClass}">
+                                <h4>🔧 Service Status</h4>
+                                <p><strong>${serviceStatusText}</strong></p>
+                                <small>${status.data}</small>
+                            </div>
+                        </div>
+                        <div class="col">
+                            <div class="alert alert-info">
+                                <h4>📝 Monitored URLs</h4>
+                                <p><strong>Total: ${urlCount} URLs</strong></p>
+                                ${urlCount > 0 ? '<small>URLs configured and ready for monitoring</small>' : '<small>No URLs configured yet</small>'}
+                            </div>
+                        </div>
                     </div>
+                    
+                    ${urlCount > 0 ? `
+                    <div class="alert alert-info">
+                        <h5>📋 URL List:</h5>
+                        <ul style="margin-left: 20px;">
+                            ${urlLines.map(url => `<li>${url.trim()}</li>`).join('')}
+                        </ul>
+                    </div>
+                    ` : ''}
                 `;
                 
             } catch (error) {
                 console.error('Failed to load status:', error);
+                const statusDisplay = document.getElementById('status-display');
+                statusDisplay.innerHTML = `
+                    <div class="alert alert-warning">
+                        <h4>⚠️ Status Check Failed</h4>
+                        <p>Could not connect to API. Use Manual Commands tab for SSH access.</p>
+                    </div>
+                `;
             }
         }
 
