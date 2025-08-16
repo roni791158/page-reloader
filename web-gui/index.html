@@ -357,8 +357,11 @@ chmod +x update-router.sh
                 
                 // Try to parse as JSON
                 try {
-                    return JSON.parse(text);
+                    const jsonData = JSON.parse(text);
+                    console.log('Parsed JSON:', jsonData);
+                    return jsonData;
                 } catch (e) {
+                    console.log('Not JSON, treating as text');
                     // If not JSON, return as text
                     return { success: true, data: text };
                 }
@@ -440,14 +443,30 @@ chmod +x update-router.sh
                 const status = await apiCall('status');
                 const urls = await apiCall('list-urls');
                 
-                // Parse service status
-                const isRunning = status.data && status.data.includes('running');
+                // Parse service status from JSON response
+                let isRunning = false;
+                if (status.data && typeof status.data === 'object') {
+                    isRunning = status.data.running === true;
+                } else if (status.data && typeof status.data === 'string') {
+                    isRunning = status.data.includes('running');
+                }
+                
                 const serviceStatusText = isRunning ? '🟢 Running' : '🔴 Stopped';
                 const serviceClass = isRunning ? 'alert-success' : 'alert-danger';
                 
-                // Parse URLs
-                const urlLines = urls.data.split('\n').filter(line => line.trim() && line.includes('http'));
-                const urlCount = urlLines.length;
+                // Parse URLs from JSON response
+                let urlCount = 0;
+                let urlList = [];
+                
+                if (urls.data && typeof urls.data === 'object' && urls.data.urls) {
+                    urlList = urls.data.urls;
+                    urlCount = urlList.length;
+                } else if (urls.data && typeof urls.data === 'string') {
+                    // Fallback for text response
+                    const urlLines = urls.data.split('\n').filter(line => line.trim() && line.includes('http'));
+                    urlCount = urlLines.length;
+                    urlList = urlLines.map(line => ({ url: line.trim(), status: 'unknown' }));
+                }
                 
                 const statusDisplay = document.getElementById('status-display');
                 statusDisplay.innerHTML = `
@@ -472,7 +491,12 @@ chmod +x update-router.sh
                     <div class="alert alert-info">
                         <h5>📋 URL List:</h5>
                         <ul style="margin-left: 20px;">
-                            ${urlLines.map(url => `<li>${url.trim()}</li>`).join('')}
+                            ${urlList.map(item => {
+                                const url = typeof item === 'object' ? item.url : item;
+                                const status = typeof item === 'object' ? item.status : 'unknown';
+                                const statusIcon = status === 'online' ? '🟢' : status === 'offline' ? '🔴' : '⚪';
+                                return `<li>${statusIcon} ${url}</li>`;
+                            }).join('')}
                         </ul>
                     </div>
                     ` : ''}
