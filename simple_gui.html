@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Page Reloader - Simple Interface</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+        
+        .content {
+            padding: 30px;
+        }
+        
+        .alert {
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        
+        .alert-warning {
+            background: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeaa7;
+        }
+        
+        .alert-info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+        
+        .command-block {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 10px 0;
+            font-family: 'Courier New', monospace;
+            white-space: pre-wrap;
+            border-left: 4px solid #667eea;
+        }
+        
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 600;
+            transition: all 0.3s;
+            margin: 5px;
+            text-decoration: none;
+            display: inline-block;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+        }
+        
+        .btn-success {
+            background: #28a745;
+            color: white;
+        }
+        
+        .btn-danger {
+            background: #dc3545;
+            color: white;
+        }
+        
+        .form-control {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            font-size: 16px;
+            margin: 10px 0;
+        }
+        
+        .section {
+            margin-bottom: 30px;
+            padding: 20px;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+        }
+        
+        h2 {
+            color: #495057;
+            margin-bottom: 15px;
+        }
+        
+        h3 {
+            color: #667eea;
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔄 Page Reloader</h1>
+            <p>Simple Direct Interface - No CGI Required</p>
+        </div>
+        
+        <div class="content">
+            <div class="alert alert-warning">
+                <h4>⚠️ CGI API Issues Detected</h4>
+                <p>Since the CGI interface is not working reliably, use these direct SSH commands for guaranteed results.</p>
+            </div>
+            
+            <div class="section">
+                <h2>🎯 Quick Setup for Your Website</h2>
+                <h3>Step 1: SSH to Router</h3>
+                <div class="command-block">ssh root@192.168.1.1</div>
+                
+                <h3>Step 2: Add Your Website URL</h3>
+                <input type="url" id="userUrl" class="form-control" placeholder="Enter your website URL" value="">
+                <button class="btn btn-primary" onclick="generateCommands()">📋 Generate Commands</button>
+                
+                <div id="generatedCommands" style="display:none;">
+                    <h3>Step 3: Run These Commands</h3>
+                    <div id="commandOutput" class="command-block"></div>
+                </div>
+            </div>
+            
+            <div class="section">
+                <h2>⚙️ Service Management</h2>
+                <h3>Basic Commands:</h3>
+                <div class="command-block"># Check current status
+page-reloader status
+
+# List all URLs
+page-reloader list-urls
+
+# Start monitoring
+page-reloader start
+
+# Stop monitoring  
+page-reloader stop
+
+# View logs
+page-reloader logs</div>
+            </div>
+            
+            <div class="section">
+                <h2>🔧 Advanced Configuration</h2>
+                
+                <h3>Set Check Interval (seconds):</h3>
+                <div class="command-block"># Check every 10 minutes (600 seconds)
+page-reloader set-interval 600
+
+# Check every 5 minutes (300 seconds)
+page-reloader set-interval 300
+
+# Check every 1 minute (60 seconds)
+page-reloader set-interval 60</div>
+                
+                <h3>Set Timeout (seconds):</h3>
+                <div class="command-block"># 30 second timeout
+page-reloader set-timeout 30
+
+# 60 second timeout
+page-reloader set-timeout 60</div>
+                
+                <h3>Quick Presets:</h3>
+                <div class="command-block"># Fast monitoring (15s intervals)
+page-reloader set-preset fast
+
+# Normal monitoring (30s intervals)  
+page-reloader set-preset normal
+
+# Slow monitoring (60s intervals)
+page-reloader set-preset slow
+
+# Very slow monitoring (5min intervals)
+page-reloader set-preset very-slow</div>
+            </div>
+            
+            <div class="section">
+                <h2>📋 URL Management</h2>
+                <div class="command-block"># Add single URL
+page-reloader add-url "https://example.com"
+
+# Add multiple URLs
+page-reloader add-url "https://site1.com"
+page-reloader add-url "https://site2.com"  
+page-reloader add-url "https://site3.com"
+
+# Remove URL
+page-reloader remove-url "https://example.com"
+
+# Clear all URLs
+page-reloader clear-urls
+
+# Set custom interval for specific URL
+page-reloader set-url-interval "https://example.com" 600</div>
+            </div>
+            
+            <div class="section">
+                <h2>🔍 Troubleshooting</h2>
+                
+                <h3>If Service Won't Start:</h3>
+                <div class="command-block"># Kill any stuck processes
+pkill -f page-reloader
+
+# Remove PID file
+rm -f /var/run/page-reloader.pid
+
+# Start fresh
+page-reloader start</div>
+                
+                <h3>If URLs Not Working:</h3>
+                <div class="command-block"># Test URL manually
+page-reloader test "https://your-url.com"
+
+# Check configuration
+cat /etc/page-reloader/config
+
+# Verify page-reloader script
+which page-reloader
+ls -la /usr/bin/page-reloader</div>
+                
+                <h3>View Real-time Logs:</h3>
+                <div class="command-block"># Follow logs in real-time
+tail -f /var/log/page-reloader.log
+
+# View last 20 lines
+tail -20 /var/log/page-reloader.log</div>
+            </div>
+            
+            <div class="alert alert-info">
+                <h4>✅ This Method is 100% Reliable</h4>
+                <p>These SSH commands work directly with the page-reloader script, bypassing any web interface issues.</p>
+                <p>All changes take effect immediately and are persistent across reboots.</p>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        function generateCommands() {
+            const url = document.getElementById('userUrl').value.trim();
+            
+            if (!url) {
+                alert('Please enter a valid URL');
+                return;
+            }
+            
+            const commands = `# Add your website URL
+page-reloader add-url "${url}"
+
+# Set monitoring interval (600 seconds = 10 minutes)
+page-reloader set-interval 600
+
+# Set connection timeout (30 seconds)
+page-reloader set-timeout 30
+
+# Start monitoring service
+page-reloader start
+
+# Enable auto-start on boot
+/etc/init.d/page-reloader enable
+
+# Check status
+page-reloader status
+
+# View your configured URLs
+page-reloader list-urls
+
+# View logs to confirm it's working
+page-reloader logs`;
+            
+            document.getElementById('commandOutput').textContent = commands;
+            document.getElementById('generatedCommands').style.display = 'block';
+            
+            // Scroll to commands
+            document.getElementById('generatedCommands').scrollIntoView({ behavior: 'smooth' });
+        }
+        
+        // Auto-focus URL input
+        document.addEventListener('DOMContentLoaded', function() {
+            document.getElementById('userUrl').focus();
+        });
+    </script>
+</body>
+</html>
