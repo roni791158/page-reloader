@@ -1,0 +1,138 @@
+# Page Reloader Configuration File
+# Copy this file to /etc/page-reloader/config and modify as needed
+
+# =============================================================================
+# BASIC SETTINGS
+# =============================================================================
+
+# Check interval in seconds (how often to check URLs)
+# Default: 30 seconds
+CHECK_INTERVAL=30
+
+# Connection timeout in seconds (how long to wait for response)
+# Default: 10 seconds
+TIMEOUT=10
+
+# Number of retry attempts when a URL fails
+# Default: 3 attempts
+RETRY_COUNT=3
+
+# =============================================================================
+# URLS TO MONITOR
+# =============================================================================
+
+# URLs to monitor (space-separated list)
+# Examples:
+URLS="http://192.168.1.1 http://google.com https://github.com"
+
+# You can also monitor specific router pages:
+# URLS="http://192.168.1.1/cgi-bin/luci http://192.168.1.1/cgi-bin/luci/admin"
+
+# Or external services:
+# URLS="https://www.google.com https://github.com https://stackoverflow.com"
+
+# Mix of internal and external:
+# URLS="http://192.168.1.1 https://www.google.com http://192.168.1.100:8080"
+
+# =============================================================================
+# LOGGING SETTINGS
+# =============================================================================
+
+# Enable logging to file
+# 1 = enabled, 0 = disabled
+ENABLE_LOG=1
+
+# Enable syslog
+# 1 = enabled, 0 = disabled
+ENABLE_SYSLOG=0
+
+# =============================================================================
+# ADVANCED SETTINGS
+# =============================================================================
+
+# User agent string for HTTP requests (optional)
+# USER_AGENT="Page-Reloader/1.0"
+
+# Custom headers (optional)
+# CUSTOM_HEADERS="X-Forwarded-For: 192.168.1.1"
+
+# Follow redirects (1 = yes, 0 = no)
+# FOLLOW_REDIRECTS=1
+
+# Maximum number of redirects to follow
+# MAX_REDIRECTS=5
+
+# =============================================================================
+# NOTIFICATION SETTINGS
+# =============================================================================
+
+# Email notification on failures (requires mail command)
+# ENABLE_EMAIL_NOTIFICATIONS=0
+# EMAIL_TO="admin@example.com"
+# EMAIL_FROM="router@example.com"
+
+# Webhook notification URL (optional)
+# WEBHOOK_URL="https://hooks.slack.com/services/YOUR/WEBHOOK/URL"
+
+# =============================================================================
+# PER-URL INTERVALS (ADVANCED)
+# =============================================================================
+
+# You can set different check intervals for different URLs
+# Format: INTERVAL_<URL_SAFE_NAME>=<seconds>
+# URL_SAFE_NAME is the URL with non-alphanumeric characters replaced by underscores
+
+# Examples of per-URL intervals:
+# INTERVAL_http___192_168_1_1=30                    # Router admin every 30s
+# INTERVAL_https___www_google_com=300               # Google every 5 minutes
+# INTERVAL_https___github_com=600                   # GitHub every 10 minutes
+
+# Note: URLs without custom intervals will use the default CHECK_INTERVAL
+
+# =============================================================================
+# EXAMPLES FOR DIFFERENT USE CASES
+# =============================================================================
+
+# Example 1: Monitor router admin interface only
+# URLS="http://192.168.1.1/cgi-bin/luci"
+# CHECK_INTERVAL=60
+# RETRY_COUNT=5
+
+# Example 2: Monitor multiple internal services
+# URLS="http://192.168.1.1 http://192.168.1.2:8080 http://192.168.1.3:3000"
+# CHECK_INTERVAL=30
+# TIMEOUT=15
+
+# Example 3: Monitor external connectivity
+# URLS="https://www.google.com https://1.1.1.1 https://8.8.8.8"
+# CHECK_INTERVAL=120
+# TIMEOUT=20
+
+# Example 4: Mixed monitoring with per-URL intervals
+# URLS="http://192.168.1.1 https://www.google.com https://github.com"
+# CHECK_INTERVAL=60                                 # Default interval
+# INTERVAL_http___192_168_1_1=30                   # Router: every 30s
+# INTERVAL_https___www_google_com=120              # Google: every 2min
+# INTERVAL_https___github_com=300                  # GitHub: every 5min
+
+# Example 5: Critical service monitoring
+# URLS="http://192.168.1.1/api/status http://192.168.1.1/cgi-bin/luci"
+# CHECK_INTERVAL=60                                 # Default
+# INTERVAL_http___192_168_1_1_api_status=15        # API: every 15s (critical)
+# INTERVAL_http___192_168_1_1_cgi_bin_luci=300     # Admin UI: every 5min
+
+# =============================================================================
+# TROUBLESHOOTING
+# =============================================================================
+
+# If you're having issues:
+# 1. Check the log file: /var/log/page-reloader.log
+# 2. Test URLs manually: page-reloader test
+# 3. Check service status: page-reloader status
+# 4. Verify network connectivity: ping google.com
+
+# Common issues:
+# - URLs not responding: Check if the services are actually running
+# - Permission denied: Make sure the script runs as root
+# - DNS issues: Try using IP addresses instead of domain names
+# - Firewall blocking: Check iptables rules
