@@ -36,6 +36,21 @@ check_root() {
     fi
 }
 
+# Check if service is running
+is_service_running() {
+    if [ -f "$PID_FILE" ]; then
+        local pid=$(cat "$PID_FILE" 2>/dev/null)
+        if [ -n "$pid" ] && kill -0 "$pid" 2>/dev/null; then
+            return 0
+        else
+            # Remove stale PID file
+            rm -f "$PID_FILE"
+            return 1
+        fi
+    fi
+    return 1
+}
+
 # Load configuration
 load_config() {
     if [ -f "$CONFIG_FILE" ]; then
@@ -316,6 +331,18 @@ remove_url() {
     
     log "${GREEN}Removed URL: $url${NC}"
     log "${BLUE}Current URLs: $NEW_URLS${NC}"
+    
+    # Also remove URL-specific interval if exists
+    local url_safe=$(echo "$url" | sed 's|[^a-zA-Z0-9]|_|g')
+    local var_name="INTERVAL_$url_safe"
+    sed -i "/^$var_name=/d" "$CONFIG_FILE" 2>/dev/null
+    
+    # Auto-restart service if running to apply URL removal
+    if is_service_running; then
+        log "${BLUE}Service is running. Restarting to apply URL removal...${NC}"
+        restart_service
+        log "${GREEN}Service restarted successfully${NC}"
+    fi
 }
 
 # List all configured URLs with intervals
@@ -581,7 +608,15 @@ remove_url_interval() {
     
     log "${GREEN}Removed custom interval for: $url${NC}"
     log "${BLUE}URL will now use default interval${NC}"
-    log "${BLUE}Restart service to apply changes: page-reloader restart${NC}"
+    
+    # Auto-restart service if running to apply interval removal
+    if is_service_running; then
+        log "${BLUE}Service is running. Restarting to apply interval removal...${NC}"
+        restart_service
+        log "${GREEN}Service restarted successfully${NC}"
+    else
+        log "${BLUE}Start service to apply changes: page-reloader start${NC}"
+    fi
 }
 
 # Set timeout
