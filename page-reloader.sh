@@ -129,58 +129,25 @@ get_url_interval() {
     fi
 }
 
-# Monitor and reload pages (with per-URL intervals)
+# Monitor and reload pages (simplified for stability)
 monitor_pages() {
-    local default_interval="${CHECK_INTERVAL:-30}"
+    local check_interval="${CHECK_INTERVAL:-30}"
     
-    log "${GREEN}Starting page monitoring with default interval: ${default_interval}s${NC}"
-    
-    # Create URL tracking arrays
-    local url_list=""
-    local url_next_check=""
-    local current_time=$(date +%s)
-    
-    # Initialize next check times for all URLs
-    for url in $URLS; do
-        url_list="$url_list $url"
-        url_next_check="$url_next_check $current_time"
-    done
+    log "${GREEN}Starting page monitoring with interval: ${check_interval}s${NC}"
     
     while true; do
-        current_time=$(date +%s)
-        local sleep_time=5  # Check every 5 seconds for due URLs
-        local any_checked=0
-        
-        # Process each URL with its own interval
-        local i=1
-        for url in $url_list; do
-            # Get the next check time for this URL
-            local next_check_time=$(echo "$url_next_check" | cut -d' ' -f$i)
+        for url in $URLS; do
+            local url_interval=$(get_url_interval "$url")
             
-            # Check if it's time to check this URL
-            if [ "$current_time" -ge "$next_check_time" ]; then
-                local url_interval=$(get_url_interval "$url")
-                
-                if ! check_url "$url"; then
-                    log "${YELLOW}Page not accessible: $url (interval: ${url_interval}s)${NC}"
-                    reload_page "$url"
-                else
-                    log "${GREEN}Page accessible: $url (interval: ${url_interval}s)${NC}"
-                fi
-                
-                # Update next check time for this URL
-                local new_next_check=$((current_time + url_interval))
-                url_next_check=$(echo "$url_next_check" | sed "s/$(echo "$url_next_check" | cut -d' ' -f$i)/$new_next_check/$i")
-                any_checked=1
+            if ! check_url "$url"; then
+                log "${YELLOW}Page not accessible: $url${NC}"
+                reload_page "$url"
+            else
+                log "${GREEN}Page accessible: $url${NC}"
             fi
-            
-            i=$((i + 1))
         done
         
-        # If no URLs were checked, sleep for a short while
-        if [ $any_checked -eq 0 ]; then
-            sleep $sleep_time
-        fi
+        sleep "$check_interval"
     done
 }
 
