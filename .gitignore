@@ -1,0 +1,51 @@
+# Build files
+build/
+dist/
+*.tar.gz
+*.ipk
+
+# Log files
+*.log
+*.log.*
+
+# Runtime files
+*.pid
+
+# Temporary files
+*.tmp
+*.temp
+*~
+
+# OS specific files
+.DS_Store
+Thumbs.db
+
+# Editor files
+*.swp
+*.swo
+.vscode/
+.idea/
+
+# Backup files
+*.bak
+*.backup
+
+# Package files
+*.deb
+*.rpm
+
+# Test files
+test_*
+*_test
+
+# Local configuration
+config.local
+*.local
+
+# Development files
+dev/
+development/
+
+# Cache
+.cache/
+cache/

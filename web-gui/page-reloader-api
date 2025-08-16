@@ -1,0 +1,380 @@
+#!/bin/sh
+# Page Reloader CGI API
+# Lightweight backend for web interface
+
+# Set content type
+echo "Content-Type: application/json"
+echo "Cache-Control: no-cache"
+echo ""
+
+# Configuration
+SCRIPT_PATH="/usr/bin/page-reloader"
+CONFIG_FILE="/etc/page-reloader/config"
+LOG_FILE="/var/log/page-reloader.log"
+
+# Parse query parameters
+if [ "$REQUEST_METHOD" = "GET" ]; then
+    QUERY="$QUERY_STRING"
+elif [ "$REQUEST_METHOD" = "POST" ]; then
+    # Read POST data
+    if [ -n "$CONTENT_LENGTH" ]; then
+        read -n "$CONTENT_LENGTH" QUERY
+    fi
+fi
+
+# Function to parse parameters
+get_param() {
+    echo "$QUERY" | sed -n "s/.*[?&]$1=\([^&]*\).*/\1/p" | sed 's/+/ /g' | sed 's/%20/ /g' | sed 's/%3A/:/g' | sed 's/%2F/\//g'
+}
+
+# Function to URL decode
+url_decode() {
+    printf '%b' "${1//%/\\x}"
+}
+
+# Get action parameter
+ACTION=$(get_param "action")
+
+# Function to return JSON response
+json_response() {
+    local success="$1"
+    local message="$2"
+    local data="$3"
+    
+    if [ "$success" = "true" ]; then
+        if [ -n "$data" ]; then
+            echo "{\"success\":true,\"message\":\"$message\",\"data\":$data}"
+        else
+            echo "{\"success\":true,\"message\":\"$message\"}"
+        fi
+    else
+        echo "{\"success\":false,\"error\":\"$message\"}"
+    fi
+}
+
+# Function to escape JSON strings
+json_escape() {
+    echo "$1" | sed 's/\\/\\\\/g' | sed 's/"/\\"/g' | sed 's/\x08/\\b/g' | sed 's/\x0c/\\f/g' | sed 's/\x0a/\\n/g' | sed 's/\x0d/\\r/g' | sed 's/\x09/\\t/g'
+}
+
+# Function to check if service is running
+is_service_running() {
+    if [ -f "/var/run/page-reloader.pid" ]; then
+        local pid=$(cat "/var/run/page-reloader.pid" 2>/dev/null)
+        if [ -n "$pid" ] && kill -0 "$pid" 2>/dev/null; then
+            return 0
+        fi
+    fi
+    return 1
+}
+
+# Function to get URL status
+get_url_status() {
+    local url="$1"
+    local timeout="${2:-10}"
+    
+    if command -v curl >/dev/null 2>&1; then
+        if curl -s -f --max-time "$timeout" --connect-timeout "$timeout" "$url" >/dev/null 2>&1; then
+            echo "online"
+        else
+            echo "offline"
+        fi
+    elif command -v wget >/dev/null 2>&1; then
+        if wget -q -T "$timeout" --tries=1 -O /dev/null "$url" >/dev/null 2>&1; then
+            echo "online"
+        else
+            echo "offline"
+        fi
+    else
+        echo "unknown"
+    fi
+}
+
+# Function to get URL interval
+get_url_interval() {
+    local url="$1"
+    local url_safe=$(echo "$url" | sed 's|[^a-zA-Z0-9]|_|g')
+    local var_name="INTERVAL_$url_safe"
+    
+    if [ -f "$CONFIG_FILE" ]; then
+        . "$CONFIG_FILE"
+        eval "local interval=\$$var_name"
+        if [ -n "$interval" ] && [ "$interval" -gt 0 ]; then
+            echo "$interval"
+        else
+            echo "${CHECK_INTERVAL:-30}"
+        fi
+    else
+        echo "30"
+    fi
+}
+
+# Main API handlers
+case "$ACTION" in
+    "status")
+        if is_service_running; then
+            json_response "true" "Service status retrieved" '{"running":true}'
+        else
+            json_response "true" "Service status retrieved" '{"running":false}'
+        fi
+        ;;
+        
+    "list-urls")
+        if [ -f "$CONFIG_FILE" ]; then
+            . "$CONFIG_FILE"
+            if [ -n "$URLS" ]; then
+                urls_json="["
+                first=true
+                for url in $URLS; do
+                    if [ "$first" = "true" ]; then
+                        first=false
+                    else
+                        urls_json="$urls_json,"
+                    fi
+                    
+                    status=$(get_url_status "$url" 5)
+                    interval=$(get_url_interval "$url")
+                    default_interval="${CHECK_INTERVAL:-30}"
+                    
+                    escaped_url=$(json_escape "$url")
+                    urls_json="$urls_json{\"url\":\"$escaped_url\",\"status\":\"$status\",\"interval\":$interval,\"defaultInterval\":$default_interval}"
+                done
+                urls_json="$urls_json]"
+                json_response "true" "URLs retrieved" "{\"urls\":$urls_json}"
+            else
+                json_response "true" "No URLs configured" '{"urls":[]}'
+            fi
+        else
+            json_response "false" "Configuration file not found"
+        fi
+        ;;
+        
+    "add-url")
+        url=$(url_decode "$(get_param "url")")
+        if [ -n "$url" ]; then
+            if "$SCRIPT_PATH" add-url "$url" >/dev/null 2>&1; then
+                json_response "true" "URL added successfully"
+            else
+                json_response "false" "Failed to add URL"
+            fi
+        else
+            json_response "false" "URL parameter required"
+        fi
+        ;;
+        
+    "remove-url")
+        url=$(url_decode "$(get_param "url")")
+        if [ -n "$url" ]; then
+            if "$SCRIPT_PATH" remove-url "$url" >/dev/null 2>&1; then
+                json_response "true" "URL removed successfully"
+            else
+                json_response "false" "Failed to remove URL"
+            fi
+        else
+            json_response "false" "URL parameter required"
+        fi
+        ;;
+        
+    "set-url-interval")
+        url=$(url_decode "$(get_param "url")")
+        interval=$(get_param "interval")
+        if [ -n "$url" ] && [ -n "$interval" ]; then
+            if "$SCRIPT_PATH" set-url-interval "$url" "$interval" >/dev/null 2>&1; then
+                json_response "true" "Interval updated successfully"
+            else
+                json_response "false" "Failed to update interval"
+            fi
+        else
+            json_response "false" "URL and interval parameters required"
+        fi
+        ;;
+        
+    "test-url")
+        url=$(url_decode "$(get_param "url")")
+        if [ -n "$url" ]; then
+            status=$(get_url_status "$url" 10)
+            if [ "$status" = "online" ]; then
+                json_response "true" "URL tested successfully" '{"accessible":true}'
+            else
+                json_response "true" "URL tested successfully" '{"accessible":false}'
+            fi
+        else
+            json_response "false" "URL parameter required"
+        fi
+        ;;
+        
+    "test-all")
+        if "$SCRIPT_PATH" test >/dev/null 2>&1; then
+            json_response "true" "All URLs tested"
+        else
+            json_response "false" "Failed to test URLs"
+        fi
+        ;;
+        
+    "start")
+        if "$SCRIPT_PATH" start >/dev/null 2>&1; then
+            json_response "true" "Service started"
+        else
+            json_response "false" "Failed to start service"
+        fi
+        ;;
+        
+    "stop")
+        if "$SCRIPT_PATH" stop >/dev/null 2>&1; then
+            json_response "true" "Service stopped"
+        else
+            json_response "false" "Failed to stop service"
+        fi
+        ;;
+        
+    "restart")
+        if "$SCRIPT_PATH" restart >/dev/null 2>&1; then
+            json_response "true" "Service restarted"
+        else
+            json_response "false" "Failed to restart service"
+        fi
+        ;;
+        
+    "set-interval")
+        interval=$(get_param "interval")
+        if [ -n "$interval" ]; then
+            if "$SCRIPT_PATH" set-interval "$interval" >/dev/null 2>&1; then
+                json_response "true" "Default interval updated"
+            else
+                json_response "false" "Failed to update interval"
+            fi
+        else
+            json_response "false" "Interval parameter required"
+        fi
+        ;;
+        
+    "set-timeout")
+        timeout=$(get_param "timeout")
+        if [ -n "$timeout" ]; then
+            if "$SCRIPT_PATH" set-timeout "$timeout" >/dev/null 2>&1; then
+                json_response "true" "Timeout updated"
+            else
+                json_response "false" "Failed to update timeout"
+            fi
+        else
+            json_response "false" "Timeout parameter required"
+        fi
+        ;;
+        
+    "set-preset")
+        preset=$(get_param "preset")
+        if [ -n "$preset" ]; then
+            if "$SCRIPT_PATH" set-preset "$preset" >/dev/null 2>&1; then
+                json_response "true" "Preset applied"
+            else
+                json_response "false" "Failed to apply preset"
+            fi
+        else
+            json_response "false" "Preset parameter required"
+        fi
+        ;;
+        
+    "show-timing")
+        if [ -f "$CONFIG_FILE" ]; then
+            . "$CONFIG_FILE"
+            timing_info=$(json_escape "$("$SCRIPT_PATH" show-timing 2>/dev/null)")
+            json_response "true" "Timing info retrieved" "{\"info\":\"$timing_info\",\"interval\":${CHECK_INTERVAL:-30},\"timeout\":${TIMEOUT:-10}}"
+        else
+            json_response "false" "Configuration file not found"
+        fi
+        ;;
+        
+    "logs")
+        if [ -f "$LOG_FILE" ]; then
+            logs_json="["
+            first=true
+            tail -20 "$LOG_FILE" | while IFS= read -r line; do
+                if [ "$first" = "true" ]; then
+                    first=false
+                else
+                    echo -n ","
+                fi
+                escaped_line=$(json_escape "$line")
+                echo -n "\"$escaped_line\""
+            done > /tmp/logs.json
+            logs_content=$(cat /tmp/logs.json)
+            rm -f /tmp/logs.json
+            json_response "true" "Logs retrieved" "{\"logs\":[$logs_content]}"
+        else
+            json_response "true" "No logs available" '{"logs":[]}'
+        fi
+        ;;
+        
+    "clear-urls")
+        if "$SCRIPT_PATH" clear-urls >/dev/null 2>&1; then
+            json_response "true" "All URLs cleared"
+        else
+            json_response "false" "Failed to clear URLs"
+        fi
+        ;;
+        
+    "enable-autostart")
+        if /etc/init.d/page-reloader enable >/dev/null 2>&1; then
+            json_response "true" "Auto-start enabled"
+        else
+            json_response "false" "Failed to enable auto-start"
+        fi
+        ;;
+        
+    "disable-autostart")
+        if /etc/init.d/page-reloader disable >/dev/null 2>&1; then
+            json_response "true" "Auto-start disabled"
+        else
+            json_response "false" "Failed to disable auto-start"
+        fi
+        ;;
+        
+    "export-config")
+        if [ -f "$CONFIG_FILE" ]; then
+            config_content=$(json_escape "$(cat "$CONFIG_FILE")")
+            json_response "true" "Configuration exported" "{\"config\":\"$config_content\"}"
+        else
+            json_response "false" "Configuration file not found"
+        fi
+        ;;
+        
+    "import-config")
+        config=$(url_decode "$(get_param "config")")
+        if [ -n "$config" ]; then
+            echo "$config" > "$CONFIG_FILE" 2>/dev/null
+            if [ $? -eq 0 ]; then
+                json_response "true" "Configuration imported"
+            else
+                json_response "false" "Failed to import configuration"
+            fi
+        else
+            json_response "false" "Configuration data required"
+        fi
+        ;;
+        
+    "system-info")
+        info="OpenWrt Router - Page Reloader v1.0\\n"
+        info="$info$(uname -a 2>/dev/null)\\n"
+        info="$info$(uptime 2>/dev/null)\\n"
+        info="$info$(df -h / 2>/dev/null | tail -1)\\n"
+        info="$info$(free -m 2>/dev/null | head -2 | tail -1)"
+        escaped_info=$(json_escape "$info")
+        json_response "true" "System info retrieved" "{\"info\":\"$escaped_info\"}"
+        ;;
+        
+    "uninstall")
+        if [ -f "/tmp/uninstall.sh" ]; then
+            /tmp/uninstall.sh --force >/dev/null 2>&1
+        elif [ -f "./uninstall.sh" ]; then
+            ./uninstall.sh --force >/dev/null 2>&1
+        else
+            json_response "false" "Uninstaller not found"
+            exit 1
+        fi
+        json_response "true" "Service uninstalled"
+        ;;
+        
+    *)
+        json_response "false" "Unknown action: $ACTION"
+        ;;
+esac

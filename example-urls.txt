@@ -1,0 +1,26 @@
+# Example URLs for Page Reloader Tool
+# Lines starting with # are comments and will be ignored
+# One URL per line
+
+# Router admin interface
+http://192.168.1.1
+http://192.168.1.1/cgi-bin/luci
+
+# External connectivity checks
+https://www.google.com
+https://1.1.1.1
+https://8.8.8.8
+
+# Popular websites
+https://github.com
+https://stackoverflow.com
+https://www.wikipedia.org
+
+# Local network services (examples)
+# http://192.168.1.100:8080
+# http://192.168.1.200:3000
+# http://nas.local
+
+# Custom services
+# https://your-domain.com
+# http://your-server.local:9090

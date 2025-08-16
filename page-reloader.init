@@ -1,0 +1,168 @@
+#!/bin/sh /etc/rc.common
+# OpenWrt init script for Page Reloader service
+
+START=99
+STOP=10
+USE_PROCD=1
+
+SERVICE_NAME="page-reloader"
+SERVICE_BIN="/usr/bin/page-reloader"
+SERVICE_CONFIG="/etc/page-reloader/config"
+SERVICE_PID_FILE="/var/run/page-reloader.pid"
+
+validate_config() {
+    uci_load_validate "$SERVICE_NAME" "$SERVICE_NAME" "$1" "$2" \
+        'check_interval:uinteger:30' \
+        'timeout:uinteger:10' \
+        'retry_count:uinteger:3' \
+        'urls:string' \
+        'enable_log:bool:1' \
+        'enable_syslog:bool:0'
+}
+
+start_service() {
+    validate_config "$1" "$2" || {
+        echo "validation failed"
+        return 1
+    }
+    
+    # Create required directories
+    mkdir -p /var/log
+    mkdir -p /var/run
+    mkdir -p /etc/page-reloader
+    
+    # Check if config file exists
+    if [ ! -f "$SERVICE_CONFIG" ]; then
+        echo "Config file not found: $SERVICE_CONFIG"
+        echo "Please create configuration file first"
+        return 1
+    fi
+    
+    # Source configuration
+    . "$SERVICE_CONFIG"
+    
+    # Validate URLs
+    if [ -z "$URLS" ]; then
+        echo "No URLs configured in $SERVICE_CONFIG"
+        echo "Please add URLs to monitor"
+        return 1
+    fi
+    
+    echo "Starting $SERVICE_NAME with URLs: $URLS"
+    
+    procd_open_instance
+    procd_set_param command "$SERVICE_BIN"
+    procd_append_param command start
+    
+    # Set environment
+    procd_set_param env CHECK_INTERVAL="$CHECK_INTERVAL"
+    procd_set_param env TIMEOUT="$TIMEOUT"
+    procd_set_param env RETRY_COUNT="$RETRY_COUNT"
+    procd_set_param env URLS="$URLS"
+    procd_set_param env ENABLE_LOG="$ENABLE_LOG"
+    procd_set_param env ENABLE_SYSLOG="$ENABLE_SYSLOG"
+    
+    # Process settings
+    procd_set_param respawn ${respawn_threshold:-3600} ${respawn_timeout:-5} ${respawn_retry:-5}
+    procd_set_param stdout 1
+    procd_set_param stderr 1
+    procd_set_param pidfile "$SERVICE_PID_FILE"
+    
+    # File monitoring
+    procd_set_param file "$SERVICE_CONFIG"
+    
+    procd_close_instance
+}
+
+stop_service() {
+    echo "Stopping $SERVICE_NAME"
+    
+    # Kill any running instances
+    if [ -f "$SERVICE_PID_FILE" ]; then
+        local pid=$(cat "$SERVICE_PID_FILE" 2>/dev/null)
+        if [ -n "$pid" ] && kill -0 "$pid" 2>/dev/null; then
+            kill "$pid" 2>/dev/null
+            sleep 2
+            # Force kill if still running
+            if kill -0 "$pid" 2>/dev/null; then
+                kill -9 "$pid" 2>/dev/null
+            fi
+        fi
+        rm -f "$SERVICE_PID_FILE"
+    fi
+    
+    # Alternative method using service script
+    "$SERVICE_BIN" stop 2>/dev/null || true
+}
+
+reload_service() {
+    echo "Reloading $SERVICE_NAME configuration"
+    stop
+    start
+}
+
+status() {
+    if [ -f "$SERVICE_PID_FILE" ] && kill -0 "$(cat "$SERVICE_PID_FILE")" 2>/dev/null; then
+        echo "$SERVICE_NAME is running (PID: $(cat "$SERVICE_PID_FILE"))"
+        return 0
+    else
+        echo "$SERVICE_NAME is not running"
+        return 1
+    fi
+}
+
+# Additional service functions
+service_triggers() {
+    procd_add_reload_trigger "$SERVICE_NAME"
+    procd_add_config_trigger "config.change" "$SERVICE_NAME" /etc/init.d/"$SERVICE_NAME" reload
+}
+
+service_started() {
+    # Wait a moment for service to initialize
+    sleep 2
+    
+    if status >/dev/null 2>&1; then
+        echo "$SERVICE_NAME started successfully"
+        
+        # Log startup
+        if [ -x "$SERVICE_BIN" ]; then
+            "$SERVICE_BIN" logs | tail -3
+        fi
+    else
+        echo "Failed to start $SERVICE_NAME"
+        return 1
+    fi
+}
+
+service_stopped() {
+    echo "$SERVICE_NAME stopped"
+}
+
+# Custom commands
+extra_command "status" "Check service status"
+extra_command "test" "Test configured URLs"
+extra_command "config" "Edit configuration file"
+extra_command "logs" "Show recent logs"
+
+test() {
+    echo "Testing configured URLs..."
+    "$SERVICE_BIN" test
+}
+
+config() {
+    echo "Opening configuration file..."
+    if command -v vi >/dev/null 2>&1; then
+        vi "$SERVICE_CONFIG"
+    elif command -v nano >/dev/null 2>&1; then
+        nano "$SERVICE_CONFIG"
+    else
+        echo "No text editor found. Edit $SERVICE_CONFIG manually"
+        echo "Current configuration:"
+        cat "$SERVICE_CONFIG"
+    fi
+}
+
+logs() {
+    echo "Recent logs:"
+    "$SERVICE_BIN" logs
+}
