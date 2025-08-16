@@ -685,6 +685,7 @@ set_timing_preset() {
         log "${BLUE}  normal     - 30s interval, 10s timeout${NC}"
         log "${BLUE}  slow       - 60s interval, 15s timeout${NC}"
         log "${BLUE}  very-slow  - 300s interval, 30s timeout${NC}"
+        log "${BLUE}  tasktreasure - 600s interval, 30s timeout (for external apps)${NC}"
         return 1
     fi
     
@@ -712,6 +713,12 @@ set_timing_preset() {
             sed -i "s|^CHECK_INTERVAL=.*|CHECK_INTERVAL=300|" "$CONFIG_FILE"
             sed -i "s|^TIMEOUT=.*|TIMEOUT=30|" "$CONFIG_FILE"
             log "${GREEN}Applied 'very-slow' preset: 5min interval, 30s timeout${NC}"
+            ;;
+        tasktreasure)
+            sed -i "s|^CHECK_INTERVAL=.*|CHECK_INTERVAL=600|" "$CONFIG_FILE"
+            sed -i "s|^TIMEOUT=.*|TIMEOUT=30|" "$CONFIG_FILE"
+            log "${GREEN}Applied 'tasktreasure' preset: 10min interval, 30s timeout${NC}"
+            log "${BLUE}Perfect for external apps like TaskTreasure!${NC}"
             ;;
         *)
             log "${RED}Unknown preset: $preset${NC}"
@@ -775,6 +782,7 @@ ${YELLOW}Timing Examples:${NC}
     $0 remove-url-interval "http://192.168.1.1"   # Remove custom interval
     $0 set-timeout 15                         # 15 second timeout
     $0 set-preset fast                        # Quick monitoring
+    $0 set-preset tasktreasure                # TaskTreasure apps (10min)
     $0 show-timing                            # Show current settings
 
 ${YELLOW}Quick Start:${NC}

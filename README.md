@@ -107,6 +107,17 @@ URLS="http://192.168.1.1 http://192.168.1.2:8080 https://github.com"
 CHECK_INTERVAL=30
 ```
 
+#### Monitor External Apps (TaskTreasure Example)
+```bash
+# Quick setup for TaskTreasure monitoring
+page-reloader add-url "https://tasktreasure-otp1.onrender.com"
+page-reloader set-preset tasktreasure
+page-reloader start
+
+# Or use the dedicated setup script
+./setup-tasktreasure.sh
+```
+
 ## 🌐 Web GUI Interface
 
 ### Access Web Interface
@@ -206,6 +217,7 @@ page-reloader set-preset fast      # 15s interval, 5s timeout
 page-reloader set-preset normal    # 30s interval, 10s timeout  
 page-reloader set-preset slow      # 60s interval, 15s timeout
 page-reloader set-preset very-slow # 5min interval, 30s timeout
+page-reloader set-preset tasktreasure # 10min interval, 30s timeout (for external apps)
 
 # Show current timing settings
 page-reloader show-timing
