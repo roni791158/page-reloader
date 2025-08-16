@@ -150,94 +150,6 @@
             color: white;
         }
         
-        .url-list {
-            margin-top: 20px;
-        }
-        
-        .url-item {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 15px;
-            border: 1px solid #dee2e6;
-            border-radius: 8px;
-            margin-bottom: 10px;
-            background: #f8f9fa;
-        }
-        
-        .url-info {
-            flex: 1;
-        }
-        
-        .url-address {
-            font-weight: 600;
-            color: #495057;
-        }
-        
-        .url-interval {
-            font-size: 14px;
-            color: #6c757d;
-            margin-top: 4px;
-        }
-        
-        .url-status {
-            margin-right: 15px;
-            font-size: 18px;
-        }
-        
-        .status-online {
-            color: #28a745;
-        }
-        
-        .status-offline {
-            color: #dc3545;
-        }
-        
-        .status-unknown {
-            color: #ffc107;
-        }
-        
-        .status-panel {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 20px;
-            margin-bottom: 20px;
-        }
-        
-        .status-card {
-            background: #f8f9fa;
-            padding: 20px;
-            border-radius: 8px;
-            text-align: center;
-            border-left: 4px solid #667eea;
-        }
-        
-        .status-card h3 {
-            color: #495057;
-            margin-bottom: 10px;
-        }
-        
-        .status-card .value {
-            font-size: 2em;
-            font-weight: bold;
-            color: #667eea;
-        }
-        
-        .logs-container {
-            background: #212529;
-            color: #f8f9fa;
-            padding: 20px;
-            border-radius: 8px;
-            font-family: 'Courier New', monospace;
-            max-height: 400px;
-            overflow-y: auto;
-        }
-        
-        .log-entry {
-            margin-bottom: 5px;
-            white-space: pre-wrap;
-        }
-        
         .alert {
             padding: 15px;
             border-radius: 8px;
@@ -262,24 +174,10 @@
             border: 1px solid #ffeaa7;
         }
         
-        .loading {
-            text-align: center;
-            padding: 20px;
-        }
-        
-        .spinner {
-            border: 4px solid #f3f3f3;
-            border-top: 4px solid #667eea;
-            border-radius: 50%;
-            width: 40px;
-            height: 40px;
-            animation: spin 1s linear infinite;
-            margin: 0 auto;
-        }
-        
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
+        .alert-info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
         }
         
         .row {
@@ -306,15 +204,6 @@
                 flex-direction: column;
             }
             
-            .url-item {
-                flex-direction: column;
-                align-items: flex-start;
-            }
-            
-            .url-actions {
-                margin-top: 10px;
-            }
-            
             .row {
                 flex-direction: column;
             }
@@ -330,162 +219,268 @@
         
         <div class="nav-tabs">
             <button class="nav-tab active" onclick="showTab('dashboard')">📊 Dashboard</button>
-            <button class="nav-tab" onclick="showTab('urls')">🔗 URLs</button>
-            <button class="nav-tab" onclick="showTab('timing')">⏰ Timing</button>
-            <button class="nav-tab" onclick="showTab('logs')">📋 Logs</button>
+            <button class="nav-tab" onclick="showTab('manual')">📝 Manual Commands</button>
             <button class="nav-tab" onclick="showTab('settings')">⚙️ Settings</button>
         </div>
         
         <!-- Dashboard Tab -->
         <div id="dashboard" class="tab-content active">
-            <div class="status-panel">
-                <div class="status-card">
-                    <h3>Service Status</h3>
-                    <div class="value" id="service-status">Loading...</div>
-                </div>
-                <div class="status-card">
-                    <h3>Total URLs</h3>
-                    <div class="value" id="total-urls">0</div>
-                </div>
-                <div class="status-card">
-                    <h3>Online URLs</h3>
-                    <div class="value" id="online-urls">0</div>
-                </div>
-                <div class="status-card">
-                    <h3>Last Check</h3>
-                    <div class="value" id="last-check">Never</div>
-                </div>
-            </div>
+            <h2>Quick Setup</h2>
             
             <div class="row">
                 <div class="col">
-                    <h3>Quick Actions</h3>
+                    <h3>Add URL</h3>
+                    <input type="url" id="quick-url" class="form-control" placeholder="https://tasktreasure-otp1.onrender.com" value="https://tasktreasure-otp1.onrender.com">
+                    <button class="btn btn-primary" onclick="quickAddUrl()" style="margin-top: 10px;">➕ Add URL</button>
+                </div>
+                <div class="col">
+                    <h3>Service Control</h3>
                     <button class="btn btn-success" onclick="startService()">▶️ Start Service</button>
                     <button class="btn btn-warning" onclick="stopService()">⏸️ Stop Service</button>
                     <button class="btn btn-primary" onclick="restartService()">🔄 Restart Service</button>
-                    <button class="btn btn-secondary" onclick="testAllUrls()">🧪 Test All URLs</button>
-                </div>
-                <div class="col">
-                    <h3>Quick Add URL</h3>
-                    <input type="url" id="quick-url" class="form-control" placeholder="https://example.com">
-                    <button class="btn btn-primary" onclick="quickAddUrl()" style="margin-top: 10px;">➕ Add URL</button>
                 </div>
             </div>
+            
+            <div class="alert alert-info">
+                <h4>🎯 TaskTreasure Setup</h4>
+                <p>Click "Add URL" above to add TaskTreasure with 10-minute monitoring interval.</p>
+                <p>Or use the Manual Commands tab for SSH commands.</p>
+            </div>
+            
+            <div id="status-display"></div>
         </div>
         
-        <!-- URLs Tab -->
-        <div id="urls" class="tab-content">
-            <h2>URL Management</h2>
+        <!-- Manual Commands Tab -->
+        <div id="manual" class="tab-content">
+            <h2>Manual Commands</h2>
             
-            <div class="form-group">
-                <label>Add New URL</label>
-                <div class="row">
-                    <div class="col">
-                        <input type="url" id="new-url" class="form-control" placeholder="https://example.com">
-                    </div>
-                    <div class="col">
-                        <input type="number" id="new-url-interval" class="form-control" placeholder="Interval (seconds)" min="5">
-                    </div>
-                    <div class="col">
-                        <button class="btn btn-primary" onclick="addUrl()">➕ Add URL</button>
-                    </div>
-                </div>
+            <div class="alert alert-warning">
+                <h4>⚠️ Manual Setup Required</h4>
+                <p>If buttons don't work, SSH to your router and run these commands:</p>
             </div>
             
-            <div class="url-list" id="url-list">
-                <div class="loading">
-                    <div class="spinner"></div>
-                    <p>Loading URLs...</p>
-                </div>
-            </div>
-        </div>
-        
-        <!-- Timing Tab -->
-        <div id="timing" class="tab-content">
-            <h2>Timing Configuration</h2>
+            <h3>SSH to Router:</h3>
+            <pre style="background: #f8f9fa; padding: 15px; border-radius: 8px;">ssh root@192.168.1.1</pre>
             
-            <div class="row">
-                <div class="col">
-                    <div class="form-group">
-                        <label>Default Check Interval (seconds)</label>
-                        <input type="number" id="default-interval" class="form-control" min="5" value="30">
-                        <button class="btn btn-primary" onclick="setDefaultInterval()">Update</button>
-                    </div>
-                </div>
-                <div class="col">
-                    <div class="form-group">
-                        <label>Connection Timeout (seconds)</label>
-                        <input type="number" id="timeout" class="form-control" min="1" value="10">
-                        <button class="btn btn-primary" onclick="setTimeout()">Update</button>
-                    </div>
-                </div>
-            </div>
+            <h3>TaskTreasure Quick Setup:</h3>
+            <pre style="background: #f8f9fa; padding: 15px; border-radius: 8px;">page-reloader add-url "https://tasktreasure-otp1.onrender.com"
+page-reloader set-preset tasktreasure
+page-reloader start
+page-reloader status</pre>
             
-            <h3>Quick Presets</h3>
-            <button class="btn btn-success" onclick="setPreset('fast')">⚡ Fast (15s)</button>
-            <button class="btn btn-primary" onclick="setPreset('normal')">🏃 Normal (30s)</button>
-            <button class="btn btn-warning" onclick="setPreset('slow')">🚶 Slow (60s)</button>
-            <button class="btn btn-secondary" onclick="setPreset('very-slow')">🐌 Very Slow (5min)</button>
+            <h3>Common Commands:</h3>
+            <pre style="background: #f8f9fa; padding: 15px; border-radius: 8px;"># Add URL
+page-reloader add-url "https://example.com"
+
+# Set custom interval
+page-reloader set-url-interval "https://example.com" 600
+
+# Start/Stop service
+page-reloader start
+page-reloader stop
+page-reloader restart
+
+# Check status
+page-reloader status
+page-reloader list-urls
+
+# View logs
+page-reloader logs
+
+# Set timing presets
+page-reloader set-preset fast        # 15 seconds
+page-reloader set-preset normal      # 30 seconds
+page-reloader set-preset slow        # 60 seconds
+page-reloader set-preset tasktreasure # 600 seconds, 30s timeout</pre>
             
-            <h3>Current Timing Settings</h3>
-            <div id="timing-info" class="alert alert-info">
-                Loading timing information...
-            </div>
-        </div>
-        
-        <!-- Logs Tab -->
-        <div id="logs" class="tab-content">
-            <h2>System Logs</h2>
-            
-            <div style="margin-bottom: 20px;">
-                <button class="btn btn-primary" onclick="refreshLogs()">🔄 Refresh Logs</button>
-                <button class="btn btn-secondary" onclick="clearLogs()">🗑️ Clear Display</button>
-            </div>
-            
-            <div class="logs-container" id="logs-container">
-                <div class="loading">
-                    <div class="spinner"></div>
-                    <p>Loading logs...</p>
-                </div>
-            </div>
+            <h3>GUI Fix Commands:</h3>
+            <pre style="background: #f8f9fa; padding: 15px; border-radius: 8px;"># Download and run GUI fix
+cd /tmp
+wget https://raw.githubusercontent.com/roni791158/page-reloader/main/quick-gui-fix.sh
+chmod +x quick-gui-fix.sh
+./quick-gui-fix.sh</pre>
         </div>
         
         <!-- Settings Tab -->
         <div id="settings" class="tab-content">
-            <h2>System Settings</h2>
+            <h2>System Information</h2>
             
-            <div class="row">
-                <div class="col">
-                    <h3>Service Control</h3>
-                    <div class="form-group">
-                        <label>Auto-start on boot</label>
-                        <button class="btn btn-success" onclick="enableAutoStart()">✅ Enable</button>
-                        <button class="btn btn-danger" onclick="disableAutoStart()">❌ Disable</button>
-                    </div>
-                </div>
-                <div class="col">
-                    <h3>Data Management</h3>
-                    <button class="btn btn-warning" onclick="exportConfig()">📤 Export Config</button>
-                    <button class="btn btn-primary" onclick="importConfig()">📥 Import Config</button>
-                    <input type="file" id="config-file" style="display: none;" accept=".txt,.conf" onchange="handleConfigImport()">
-                </div>
+            <div class="alert alert-info">
+                <h4>ℹ️ Router Configuration</h4>
+                <p><strong>Router IP:</strong> 192.168.1.1</p>
+                <p><strong>GUI URL:</strong> http://192.168.1.1/page-reloader/</p>
+                <p><strong>SSH Access:</strong> ssh root@192.168.1.1</p>
             </div>
             
-            <h3>System Information</h3>
-            <div id="system-info" class="alert alert-info">
-                Loading system information...
-            </div>
+            <h3>Installation Files:</h3>
+            <ul style="margin-left: 20px;">
+                <li><strong>Main Script:</strong> /usr/bin/page-reloader</li>
+                <li><strong>Configuration:</strong> /etc/page-reloader/config</li>
+                <li><strong>Service:</strong> /etc/init.d/page-reloader</li>
+                <li><strong>Web GUI:</strong> /www/page-reloader/</li>
+                <li><strong>API:</strong> /www/cgi-bin/page-reloader-api</li>
+                <li><strong>Logs:</strong> /var/log/page-reloader.log</li>
+            </ul>
             
-            <h3>Danger Zone</h3>
-            <div class="alert alert-danger">
-                <h4>⚠️ Danger Zone</h4>
-                <p>These actions cannot be undone!</p>
-                <button class="btn btn-danger" onclick="clearAllUrls()">🗑️ Clear All URLs</button>
-                <button class="btn btn-danger" onclick="uninstallService()">🚫 Uninstall Service</button>
-            </div>
+            <h3>Update Commands:</h3>
+            <pre style="background: #f8f9fa; padding: 15px; border-radius: 8px;"># Update to latest version
+cd /tmp
+wget https://raw.githubusercontent.com/roni791158/page-reloader/main/update-router.sh
+chmod +x update-router.sh
+./update-router.sh</pre>
         </div>
     </div>
     
-    <script src="app.js"></script>
+    <script>
+        // Page Reloader Web GUI JavaScript
+        const API_BASE = '/cgi-bin/page-reloader-api';
+        let fallbackMode = false;
+
+        // API Communication
+        async function apiCall(action, params = {}) {
+            try {
+                const queryParams = new URLSearchParams({ action, ...params });
+                const response = await fetch(`${API_BASE}?${queryParams}`, {
+                    method: 'GET',
+                    headers: {
+                        'Accept': 'application/json',
+                        'Content-Type': 'application/x-www-form-urlencoded'
+                    }
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const text = await response.text();
+                console.log('API Response:', text);
+                
+                // Try to parse as JSON
+                try {
+                    return JSON.parse(text);
+                } catch (e) {
+                    // If not JSON, return as text
+                    return { success: true, data: text };
+                }
+            } catch (error) {
+                console.error('API call failed:', error);
+                showAlert('API call failed. Use Manual Commands tab for SSH commands.', 'warning');
+                throw error;
+            }
+        }
+
+        // Tab Management
+        function showTab(tabName) {
+            // Hide all tabs
+            const tabs = document.querySelectorAll('.tab-content');
+            tabs.forEach(tab => tab.classList.remove('active'));
+            
+            // Hide all nav tabs
+            const navTabs = document.querySelectorAll('.nav-tab');
+            navTabs.forEach(tab => tab.classList.remove('active'));
+            
+            // Show selected tab
+            document.getElementById(tabName).classList.add('active');
+            event.target.classList.add('active');
+        }
+
+        // Service Control Functions
+        async function startService() {
+            try {
+                await apiCall('start');
+                showAlert('Service started successfully!', 'success');
+                updateStatus();
+            } catch (error) {
+                showAlert('Failed to start service. Use manual command: page-reloader start', 'danger');
+            }
+        }
+
+        async function stopService() {
+            try {
+                await apiCall('stop');
+                showAlert('Service stopped successfully!', 'success');
+                updateStatus();
+            } catch (error) {
+                showAlert('Failed to stop service. Use manual command: page-reloader stop', 'danger');
+            }
+        }
+
+        async function restartService() {
+            try {
+                await apiCall('restart');
+                showAlert('Service restarted successfully!', 'success');
+                updateStatus();
+            } catch (error) {
+                showAlert('Failed to restart service. Use manual command: page-reloader restart', 'danger');
+            }
+        }
+
+        // URL Management Functions
+        async function quickAddUrl() {
+            const urlInput = document.getElementById('quick-url');
+            const url = urlInput.value.trim();
+            
+            if (!url) {
+                showAlert('Please enter a valid URL', 'warning');
+                return;
+            }
+            
+            try {
+                await apiCall('add-url', { url });
+                
+                // Apply TaskTreasure preset for the specific URL
+                if (url.includes('tasktreasure')) {
+                    await apiCall('set-preset', { preset: 'tasktreasure' });
+                    showAlert('TaskTreasure URL added with 10-minute monitoring!', 'success');
+                } else {
+                    showAlert('URL added successfully!', 'success');
+                }
+                
+                updateStatus();
+            } catch (error) {
+                showAlert(`Failed to add URL. Use manual command: page-reloader add-url "${url}"`, 'danger');
+            }
+        }
+
+        // Update status display
+        async function updateStatus() {
+            try {
+                const status = await apiCall('status');
+                const urls = await apiCall('list-urls');
+                
+                const statusDisplay = document.getElementById('status-display');
+                statusDisplay.innerHTML = `
+                    <div class="alert alert-info">
+                        <h4>📊 Current Status</h4>
+                        <pre>${status.data}</pre>
+                        <h5>📝 URLs:</h5>
+                        <pre>${urls.data}</pre>
+                    </div>
+                `;
+                
+            } catch (error) {
+                console.error('Failed to load status:', error);
+            }
+        }
+
+        // Utility Functions
+        function showAlert(message, type = 'info') {
+            const alertDiv = document.createElement('div');
+            alertDiv.className = `alert alert-${type}`;
+            alertDiv.innerHTML = message;
+            
+            const container = document.querySelector('.tab-content.active');
+            container.insertBefore(alertDiv, container.firstChild);
+            
+            setTimeout(() => {
+                alertDiv.remove();
+            }, 5000);
+        }
+
+        // Initialize on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            updateStatus();
+        });
+    </script>
 </body>
 </html>
