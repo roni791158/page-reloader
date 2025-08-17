@@ -1,0 +1,406 @@
+#!/bin/sh
+# Final CSP Fix for Page Reloader Web Interface
+# Resolves all Content Security Policy issues
+
+echo "🔒 Final CSP Fix for Page Reloader"
+echo "=================================="
+
+# Check if running as root
+if [ "$(id -u)" != "0" ]; then
+    echo "❌ Must run as root"
+    exit 1
+fi
+
+WEB_DIR="/www/page-reloader"
+BACKUP_DIR="/tmp/page-reloader-backup-$(date +%Y%m%d_%H%M%S)"
+
+# Create backup
+echo "📁 Creating backup..."
+mkdir -p "$BACKUP_DIR"
+if [ -f "$WEB_DIR/index.html" ]; then
+    cp "$WEB_DIR/index.html" "$BACKUP_DIR/"
+fi
+
+# Update HTML with proper CSP meta tag
+echo "🔧 Updating HTML with CSP fix..."
+cat > "$WEB_DIR/index.html" << 'EOF'
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self'; frame-src 'none'; object-src 'none'; base-uri 'self';">
+    <title>Page Reloader - Router Management</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+        
+        .header p {
+            opacity: 0.9;
+        }
+        
+        .nav-tabs {
+            display: flex;
+            background: #f8f9fa;
+            border-bottom: 1px solid #dee2e6;
+        }
+        
+        .nav-tab {
+            flex: 1;
+            padding: 15px;
+            text-align: center;
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 16px;
+            color: #495057;
+            transition: all 0.3s;
+        }
+        
+        .nav-tab.active {
+            background: white;
+            color: #667eea;
+            font-weight: bold;
+            border-bottom: 3px solid #667eea;
+        }
+        
+        .nav-tab:hover {
+            background: #e9ecef;
+        }
+        
+        .tab-content {
+            display: none;
+            padding: 30px;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #495057;
+        }
+        
+        .form-control {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+        
+        .form-control:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 600;
+            transition: all 0.3s;
+            text-decoration: none;
+            display: inline-block;
+            margin-right: 10px;
+            margin-bottom: 10px;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+        
+        .btn-success {
+            background: #28a745;
+            color: white;
+        }
+        
+        .btn-danger {
+            background: #dc3545;
+            color: white;
+        }
+        
+        .btn-warning {
+            background: #ffc107;
+            color: #212529;
+        }
+        
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+        
+        .alert {
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        
+        .alert-success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        
+        .alert-danger {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        
+        .alert-warning {
+            background: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeaa7;
+        }
+        
+        .alert-info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+        
+        .row {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .col {
+            flex: 1;
+        }
+        
+        @media (max-width: 768px) {
+            .container {
+                margin: 10px;
+                border-radius: 8px;
+            }
+            
+            .header h1 {
+                font-size: 2em;
+            }
+            
+            .nav-tabs {
+                flex-direction: column;
+            }
+            
+            .row {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔄 Page Reloader</h1>
+            <p>Router Web Interface - Monitor & Manage URLs</p>
+        </div>
+        
+        <div class="nav-tabs">
+            <button class="nav-tab active" data-tab="dashboard">📊 Dashboard</button>
+            <button class="nav-tab" data-tab="manual">📝 Manual Commands</button>
+            <button class="nav-tab" data-tab="settings">⚙️ Settings</button>
+        </div>
+        
+        <!-- Dashboard Tab -->
+        <div id="dashboard" class="tab-content active">
+            <h2>📊 Page Reloader Dashboard</h2>
+            
+            <div class="row">
+                <div class="col">
+                    <h3>➕ Add New URL</h3>
+                    <input type="url" id="quick-url" class="form-control" placeholder="https://example.com" style="margin-bottom: 10px;">
+                    <input type="number" id="quick-interval" class="form-control" placeholder="Interval (seconds)" value="600" style="margin-bottom: 10px;">
+                    <button class="btn btn-primary" id="quick-add-btn">➕ Add URL with Custom Interval</button>
+                </div>
+                <div class="col">
+                    <h3>🔧 Service Control</h3>
+                    <button class="btn btn-success" id="start-service-btn">▶️ Start Service</button>
+                    <button class="btn btn-warning" id="stop-service-btn">⏸️ Stop Service</button>
+                    <button class="btn btn-primary" id="restart-service-btn">🔄 Restart Service</button>
+                    <button class="btn btn-secondary" id="refresh-status-btn" style="margin-top: 10px;">🔄 Refresh Status</button>
+                </div>
+            </div>
+            
+            <div class="alert alert-info">
+                <h4>🚀 Multiple URLs Monitoring</h4>
+                <p><strong>✅ Features:</strong> Monitor multiple websites with different intervals</p>
+                <p><strong>⚡ Auto-restart:</strong> Service automatically restarts when URLs are added/removed</p>
+                <p><strong>📊 Real-time:</strong> Live status checking and automatic retry on failures</p>
+            </div>
+            
+            <div id="status-display"></div>
+            <div id="url-management"></div>
+        </div>
+        
+        <!-- Manual Commands Tab -->
+        <div id="manual" class="tab-content">
+            <h2>Manual Commands</h2>
+            
+            <div class="alert alert-warning">
+                <h4>⚠️ Manual Setup Required</h4>
+                <p>If buttons don't work, SSH to your router and run these commands:</p>
+            </div>
+            
+            <h3>SSH to Router:</h3>
+            <pre style="background: #f8f9fa; padding: 15px; border-radius: 8px;">ssh root@192.168.1.1</pre>
+            
+            <h3>📚 Multiple URLs Setup Example:</h3>
+            <pre style="background: #f8f9fa; padding: 15px; border-radius: 8px;"># Add multiple URLs with different intervals
+page-reloader add-url "https://tasktreasure-otp1.onrender.com"
+page-reloader set-url-interval "https://tasktreasure-otp1.onrender.com" 600
+
+page-reloader add-url "https://templinepy-6j1r.onrender.com"  
+page-reloader set-url-interval "https://templinepy-6j1r.onrender.com" 300
+
+# Start monitoring (auto-restart feature)
+page-reloader start
+page-reloader status</pre>
+            
+            <h3>🔧 Common Commands:</h3>
+            <pre style="background: #f8f9fa; padding: 15px; border-radius: 8px;"># ✨ NEW: Multiple URLs Management
+page-reloader add-url "https://example.com"
+page-reloader add-url "https://google.com"
+page-reloader list-urls
+
+# ✨ NEW: Per-URL Custom Intervals
+page-reloader set-url-interval "https://example.com" 600     # 10 minutes
+page-reloader set-url-interval "https://google.com" 300     # 5 minutes
+
+# Service Control (Auto-restart Feature)
+page-reloader start
+page-reloader stop
+page-reloader restart
+
+# Status & Monitoring
+page-reloader status
+page-reloader list-urls
+page-reloader test          # Test all URLs
+page-reloader logs
+
+# URL Management
+page-reloader remove-url "https://example.com"
+page-reloader clear-urls
+
+# Timing Presets
+page-reloader set-preset fast        # 15 seconds
+page-reloader set-preset normal      # 30 seconds
+page-reloader set-preset slow        # 60 seconds
+page-reloader set-preset very-slow   # 300 seconds (5 minutes)</pre>
+            
+            <h3>GUI Fix Commands:</h3>
+            <pre style="background: #f8f9fa; padding: 15px; border-radius: 8px;"># Download and run GUI fix
+cd /tmp
+wget https://raw.githubusercontent.com/roni791158/page-reloader/main/complete-fix.sh
+chmod +x complete-fix.sh
+./complete-fix.sh</pre>
+        </div>
+        
+        <!-- Settings Tab -->
+        <div id="settings" class="tab-content">
+            <h2>System Information</h2>
+            
+            <div class="alert alert-info">
+                <h4>ℹ️ Router Configuration</h4>
+                <p><strong>Router IP:</strong> 192.168.1.1</p>
+                <p><strong>GUI URL:</strong> http://192.168.1.1/page-reloader/</p>
+                <p><strong>SSH Access:</strong> ssh root@192.168.1.1</p>
+            </div>
+            
+            <h3>Installation Files:</h3>
+            <ul style="margin-left: 20px;">
+                <li><strong>Main Script:</strong> /usr/bin/page-reloader</li>
+                <li><strong>Configuration:</strong> /etc/page-reloader/config</li>
+                <li><strong>Service:</strong> /etc/init.d/page-reloader</li>
+                <li><strong>Web GUI:</strong> /www/page-reloader/</li>
+                <li><strong>API:</strong> /www/cgi-bin/page-reloader-api</li>
+                <li><strong>Logs:</strong> /var/log/page-reloader.log</li>
+            </ul>
+            
+            <h3>Update Commands:</h3>
+            <pre style="background: #f8f9fa; padding: 15px; border-radius: 8px;"># Update to latest version
+cd /tmp
+wget https://raw.githubusercontent.com/roni791158/page-reloader/main/complete-fix.sh
+chmod +x complete-fix.sh
+./complete-fix.sh</pre>
+        </div>
+    </div>
+    
+    <script src="page-reloader.js"></script>
+</body>
+</html>
+EOF
+
+echo "✅ HTML updated with proper CSP"
+
+# Restart web server to apply changes
+if command -v /etc/init.d/uhttpd >/dev/null 2>&1; then
+    echo "🔄 Restarting web server..."
+    /etc/init.d/uhttpd restart
+    echo "✅ Web server restarted"
+fi
+
+# Clear browser cache recommendation
+echo ""
+echo "🎉 CSP Fix Complete!"
+echo "==================="
+echo "✅ Updated HTML with proper CSP meta tag"
+echo "✅ Web server restarted"
+echo ""
+echo "📋 Next Steps:"
+echo "1. Clear browser cache (Ctrl+F5)"
+echo "2. Refresh the page: http://192.168.1.1/page-reloader/"
+echo "3. All CSP errors should be resolved"
+echo ""
+echo "🔍 Backup saved to: $BACKUP_DIR"
+echo "💡 If any issues, restore from backup"
+
+exit 0
