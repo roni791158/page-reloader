@@ -171,8 +171,9 @@ run_script_command() {
     local output
     local exit_code
     
+    # Use eval for proper argument handling
     if [ -n "$args" ]; then
-        output=$("$SCRIPT_PATH" "$cmd" $args 2>&1)
+        output=$(eval "$SCRIPT_PATH \"$cmd\" $args" 2>&1)
         exit_code=$?
     else
         output=$("$SCRIPT_PATH" "$cmd" 2>&1)
@@ -263,11 +264,13 @@ case "$ACTION" in
         
     "add-url")
         url=$(url_decode "$(get_param "url")")
+        log_debug "Add URL request: $url"
         if [ -n "$url" ]; then
             if run_script_command "add-url" "\"$url\""; then
                 json_response "true" "URL added successfully"
             else
-                json_response "false" "Failed to add URL"
+                log_error "Failed to add URL: $url"
+                json_response "false" "Failed to add URL: Script execution failed"
             fi
         else
             json_response "false" "URL parameter required"
@@ -276,11 +279,13 @@ case "$ACTION" in
         
     "remove-url")
         url=$(url_decode "$(get_param "url")")
+        log_debug "Remove URL request: $url"
         if [ -n "$url" ]; then
             if run_script_command "remove-url" "\"$url\""; then
                 json_response "true" "URL removed successfully"
             else
-                json_response "false" "Failed to remove URL"
+                log_error "Failed to remove URL: $url"
+                json_response "false" "Failed to remove URL: Script execution failed"
             fi
         else
             json_response "false" "URL parameter required"
@@ -290,11 +295,13 @@ case "$ACTION" in
     "set-url-interval")
         url=$(url_decode "$(get_param "url")")
         interval=$(get_param "interval")
+        log_debug "Set interval request: $url = $interval"
         if [ -n "$url" ] && [ -n "$interval" ]; then
-            if run_script_command "set-url-interval" "\"$url\"" "$interval"; then
+            if run_script_command "set-url-interval" "\"$url\" \"$interval\""; then
                 json_response "true" "Interval updated successfully"
             else
-                json_response "false" "Failed to update interval"
+                log_error "Failed to set interval for URL: $url = $interval"
+                json_response "false" "Failed to update interval: Script execution failed"
             fi
         else
             json_response "false" "URL and interval parameters required"
