@@ -78,9 +78,27 @@ fi
 
 log_debug "METHOD=$REQUEST_METHOD, QUERY=$QUERY"
 
-# Function to parse parameters
+# Function to parse parameters - Enhanced
 get_param() {
-    echo "$QUERY" | sed -n "s/.*[?&]$1=\([^&]*\).*/\1/p" | sed 's/+/ /g' | sed 's/%20/ /g' | sed 's/%3A/:/g' | sed 's/%2F/\//g' | sed 's/%3D/=/g'
+    local param="$1"
+    local value=""
+    
+    # Handle both GET and POST query formats
+    if echo "$QUERY" | grep -q "^$param=" ; then
+        # Parameter at start
+        value=$(echo "$QUERY" | sed "s/^$param=\([^&]*\).*/\1/")
+    elif echo "$QUERY" | grep -q "&$param=" ; then
+        # Parameter in middle/end
+        value=$(echo "$QUERY" | sed "s/.*[&]$param=\([^&]*\).*/\1/")
+    elif echo "$QUERY" | grep -q "?$param=" ; then
+        # Parameter after ?
+        value=$(echo "$QUERY" | sed "s/.*[?]$param=\([^&]*\).*/\1/")
+    fi
+    
+    # URL decode common characters
+    value=$(echo "$value" | sed 's/+/ /g' | sed 's/%20/ /g' | sed 's/%3A/:/g' | sed 's/%2F/\//g' | sed 's/%3D/=/g' | sed 's/%26/\&/g')
+    
+    echo "$value"
 }
 
 # Function to URL decode
