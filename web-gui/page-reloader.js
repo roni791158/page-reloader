@@ -235,17 +235,17 @@ async function updateStatus() {
                 const urlId = btoa(url).replace(/[^a-zA-Z0-9]/g, '');
                 
                 return `
-                <div style="border: 1px solid #dee2e6; border-radius: 8px; padding: 15px; margin-bottom: 10px; background: #f8f9fa;">
+                <div style="border: 1px solid #dee2e6; border-radius: 8px; padding: 15px; margin-bottom: 10px; background: #f8f9fa;" data-url-item="${url}">
                     <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap;">
                         <div style="flex: 1; min-width: 200px;">
                             <h6 style="margin-bottom: 5px; color: #495057;">${statusIcon} ${url}</h6>
                             <small style="color: #6c757d;">Status: <strong>${statusText}</strong> | Interval: <strong>${interval}s</strong></small>
                         </div>
                         <div style="display: flex; gap: 5px; flex-wrap: wrap; margin-top: 10px;">
-                            <input type="number" id="interval-${urlId}" value="${interval}" min="30" max="3600" style="width: 80px; padding: 5px; border: 1px solid #ccc; border-radius: 4px;" placeholder="Interval">
-                            <button class="btn btn-secondary" style="padding: 5px 10px; font-size: 12px;" data-url="${url}" data-action="update-interval">⏰ Update</button>
-                            <button class="btn btn-warning" style="padding: 5px 10px; font-size: 12px;" data-url="${url}" data-action="test">🧪 Test</button>
-                            <button class="btn btn-danger" style="padding: 5px 10px; font-size: 12px;" data-url="${url}" data-action="remove">🗑️ Remove</button>
+                            <input type="number" class="interval-input" value="${interval}" min="30" max="3600" style="width: 80px; padding: 5px; border: 1px solid #ccc; border-radius: 4px;" placeholder="Interval">
+                            <button class="btn btn-secondary url-btn" style="padding: 5px 10px; font-size: 12px;" data-action="update-interval">⏰ Update</button>
+                            <button class="btn btn-warning url-btn" style="padding: 5px 10px; font-size: 12px;" data-action="test">🧪 Test</button>
+                            <button class="btn btn-danger url-btn" style="padding: 5px 10px; font-size: 12px;" data-action="remove">🗑️ Remove</button>
                         </div>
                     </div>
                 </div>
@@ -255,28 +255,6 @@ async function updateStatus() {
             const urlListContainer = document.getElementById('url-list-container');
             if (urlListContainer) {
                 urlListContainer.innerHTML = urlManagementHtml;
-                
-                // Add event listeners for buttons
-                urlListContainer.querySelectorAll('button[data-action]').forEach(button => {
-                    button.addEventListener('click', function() {
-                        const url = this.getAttribute('data-url');
-                        const action = this.getAttribute('data-action');
-                        const urlId = btoa(url).replace(/[^a-zA-Z0-9]/g, '');
-                        
-                        switch(action) {
-                            case 'update-interval':
-                                const interval = document.getElementById(`interval-${urlId}`).value;
-                                updateUrlInterval(url, interval);
-                                break;
-                            case 'test':
-                                testUrl(url);
-                                break;
-                            case 'remove':
-                                removeUrl(url);
-                                break;
-                        }
-                    });
-                });
             }
         }
         
@@ -331,6 +309,34 @@ document.addEventListener('DOMContentLoaded', function() {
         const btn = document.getElementById(buttonId);
         if (btn) {
             btn.addEventListener('click', buttonMap[buttonId]);
+        }
+    });
+    
+    // Event delegation for dynamically created URL management buttons
+    document.addEventListener('click', function(event) {
+        if (event.target.classList.contains('url-btn')) {
+            const action = event.target.getAttribute('data-action');
+            const urlItem = event.target.closest('[data-url-item]');
+            
+            if (urlItem) {
+                const url = urlItem.getAttribute('data-url-item');
+                const intervalInput = urlItem.querySelector('.interval-input');
+                
+                switch(action) {
+                    case 'update-interval':
+                        if (intervalInput) {
+                            const interval = intervalInput.value;
+                            updateUrlInterval(url, interval);
+                        }
+                        break;
+                    case 'test':
+                        testUrl(url);
+                        break;
+                    case 'remove':
+                        removeUrl(url);
+                        break;
+                }
+            }
         }
     });
 });
