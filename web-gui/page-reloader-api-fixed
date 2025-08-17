@@ -1,0 +1,338 @@
+#!/bin/sh
+# Page Reloader CGI API - Fixed Version
+# Enhanced backend with better error handling
+
+# Set content type and CORS headers
+echo "Content-Type: application/json"
+echo "Cache-Control: no-cache"
+echo "Access-Control-Allow-Origin: *"
+echo "Access-Control-Allow-Methods: GET, POST, OPTIONS"
+echo "Access-Control-Allow-Headers: Content-Type"
+echo ""
+
+# Enhanced debugging
+DEBUG_LOG="/tmp/api-debug.log"
+ERROR_LOG="/tmp/api-error.log"
+
+# Log function
+log_debug() {
+    echo "$(date '+%Y-%m-%d %H:%M:%S'): $1" >> "$DEBUG_LOG"
+}
+
+log_error() {
+    echo "$(date '+%Y-%m-%d %H:%M:%S'): ERROR: $1" >> "$ERROR_LOG"
+}
+
+# Configuration - Multiple possible paths
+SCRIPT_PATHS="/usr/bin/page-reloader /usr/local/bin/page-reloader /bin/page-reloader"
+CONFIG_PATHS="/etc/page-reloader/config /tmp/page-reloader.config"
+LOG_PATHS="/var/log/page-reloader.log /tmp/page-reloader.log"
+
+# Find actual script path
+SCRIPT_PATH=""
+for path in $SCRIPT_PATHS; do
+    if [ -x "$path" ]; then
+        SCRIPT_PATH="$path"
+        break
+    fi
+done
+
+# Find config file
+CONFIG_FILE=""
+for path in $CONFIG_PATHS; do
+    if [ -f "$path" ]; then
+        CONFIG_FILE="$path"
+        break
+    fi
+done
+
+# Find log file
+LOG_FILE=""
+for path in $LOG_PATHS; do
+    if [ -f "$path" ]; then
+        LOG_FILE="$path"
+        break
+    fi
+done
+
+log_debug "Script path: $SCRIPT_PATH"
+log_debug "Config file: $CONFIG_FILE"
+log_debug "Log file: $LOG_FILE"
+
+# Handle preflight OPTIONS request
+if [ "$REQUEST_METHOD" = "OPTIONS" ]; then
+    log_debug "OPTIONS request handled"
+    exit 0
+fi
+
+# Parse query parameters
+if [ "$REQUEST_METHOD" = "GET" ]; then
+    QUERY="$QUERY_STRING"
+elif [ "$REQUEST_METHOD" = "POST" ]; then
+    if [ -n "$CONTENT_LENGTH" ] && [ "$CONTENT_LENGTH" -gt 0 ]; then
+        QUERY=$(dd bs=1 count="$CONTENT_LENGTH" 2>/dev/null)
+    else
+        QUERY="$QUERY_STRING"
+    fi
+fi
+
+log_debug "METHOD=$REQUEST_METHOD, QUERY=$QUERY"
+
+# Function to parse parameters
+get_param() {
+    echo "$QUERY" | sed -n "s/.*[?&]$1=\([^&]*\).*/\1/p" | sed 's/+/ /g' | sed 's/%20/ /g' | sed 's/%3A/:/g' | sed 's/%2F/\//g' | sed 's/%3D/=/g'
+}
+
+# Function to URL decode
+url_decode() {
+    local encoded="$1"
+    printf '%b' "$(echo "$encoded" | sed 's/%\([0-9A-F][0-9A-F]\)/\\x\1/g')"
+}
+
+# Get action parameter
+ACTION=$(get_param "action")
+log_debug "Action: $ACTION"
+
+# Function to return JSON response
+json_response() {
+    local success="$1"
+    local message="$2"
+    local data="$3"
+    
+    if [ "$success" = "true" ]; then
+        if [ -n "$data" ]; then
+            echo "{\"success\":true,\"message\":\"$message\",\"data\":$data}"
+        else
+            echo "{\"success\":true,\"message\":\"$message\"}"
+        fi
+    else
+        echo "{\"success\":false,\"error\":\"$message\"}"
+    fi
+    log_debug "Response: success=$success, message=$message"
+}
+
+# Function to escape JSON strings
+json_escape() {
+    echo "$1" | sed 's/\\/\\\\/g' | sed 's/"/\\"/g' | sed 's/\x08/\\b/g' | sed 's/\x0c/\\f/g' | sed 's/\x0a/\\n/g' | sed 's/\x0d/\\r/g' | sed 's/\x09/\\t/g'
+}
+
+# Function to check if service is running
+is_service_running() {
+    if [ -f "/var/run/page-reloader.pid" ]; then
+        local pid=$(cat "/var/run/page-reloader.pid" 2>/dev/null)
+        if [ -n "$pid" ] && kill -0 "$pid" 2>/dev/null; then
+            return 0
+        fi
+    fi
+    # Fallback: check process list
+    if pgrep -f "page-reloader" >/dev/null 2>&1; then
+        return 0
+    fi
+    return 1
+}
+
+# Function to run script command safely
+run_script_command() {
+    local cmd="$1"
+    shift
+    local args="$@"
+    
+    if [ -z "$SCRIPT_PATH" ]; then
+        log_error "Script not found in any expected location"
+        return 1
+    fi
+    
+    if [ ! -x "$SCRIPT_PATH" ]; then
+        log_error "Script not executable: $SCRIPT_PATH"
+        return 1
+    fi
+    
+    log_debug "Running: $SCRIPT_PATH $cmd $args"
+    
+    # Run command and capture output
+    local output
+    local exit_code
+    
+    if [ -n "$args" ]; then
+        output=$("$SCRIPT_PATH" "$cmd" $args 2>&1)
+        exit_code=$?
+    else
+        output=$("$SCRIPT_PATH" "$cmd" 2>&1)
+        exit_code=$?
+    fi
+    
+    log_debug "Command output: $output"
+    log_debug "Exit code: $exit_code"
+    
+    return $exit_code
+}
+
+# Function to get URL status
+get_url_status() {
+    local url="$1"
+    local timeout="${2:-10}"
+    
+    if command -v curl >/dev/null 2>&1; then
+        if curl -s -f --max-time "$timeout" --connect-timeout "$timeout" "$url" >/dev/null 2>&1; then
+            echo "online"
+        else
+            echo "offline"
+        fi
+    elif command -v wget >/dev/null 2>&1; then
+        if wget -q -T "$timeout" --tries=1 -O /dev/null "$url" >/dev/null 2>&1; then
+            echo "online"
+        else
+            echo "offline"
+        fi
+    else
+        echo "unknown"
+    fi
+}
+
+# Enhanced error handling for missing components
+if [ -z "$SCRIPT_PATH" ]; then
+    log_error "Page reloader script not found"
+    json_response "false" "Page reloader script not found. Please install first."
+    exit 1
+fi
+
+# Main API handlers
+case "$ACTION" in
+    "status")
+        if is_service_running; then
+            json_response "true" "Service is running" '{"running":true}'
+        else
+            json_response "true" "Service is stopped" '{"running":false}'
+        fi
+        ;;
+        
+    "list-urls")
+        if [ -f "$CONFIG_FILE" ]; then
+            . "$CONFIG_FILE" 2>/dev/null
+            if [ -n "$URLS" ]; then
+                urls_json="["
+                first=true
+                for url in $URLS; do
+                    if [ "$first" = "true" ]; then
+                        first=false
+                    else
+                        urls_json="$urls_json,"
+                    fi
+                    
+                    status=$(get_url_status "$url" 5)
+                    interval="${CHECK_INTERVAL:-30}"
+                    
+                    # Check for per-URL interval
+                    url_safe=$(echo "$url" | sed 's|[^a-zA-Z0-9]|_|g')
+                    var_name="INTERVAL_$url_safe"
+                    eval "custom_interval=\$$var_name"
+                    if [ -n "$custom_interval" ] && [ "$custom_interval" -gt 0 ]; then
+                        interval="$custom_interval"
+                    fi
+                    
+                    escaped_url=$(json_escape "$url")
+                    urls_json="$urls_json{\"url\":\"$escaped_url\",\"status\":\"$status\",\"interval\":$interval}"
+                done
+                urls_json="$urls_json]"
+                json_response "true" "URLs retrieved" "{\"urls\":$urls_json}"
+            else
+                json_response "true" "No URLs configured" '{"urls":[]}'
+            fi
+        else
+            json_response "false" "Configuration file not found"
+        fi
+        ;;
+        
+    "add-url")
+        url=$(url_decode "$(get_param "url")")
+        if [ -n "$url" ]; then
+            if run_script_command "add-url" "\"$url\""; then
+                json_response "true" "URL added successfully"
+            else
+                json_response "false" "Failed to add URL"
+            fi
+        else
+            json_response "false" "URL parameter required"
+        fi
+        ;;
+        
+    "remove-url")
+        url=$(url_decode "$(get_param "url")")
+        if [ -n "$url" ]; then
+            if run_script_command "remove-url" "\"$url\""; then
+                json_response "true" "URL removed successfully"
+            else
+                json_response "false" "Failed to remove URL"
+            fi
+        else
+            json_response "false" "URL parameter required"
+        fi
+        ;;
+        
+    "set-url-interval")
+        url=$(url_decode "$(get_param "url")")
+        interval=$(get_param "interval")
+        if [ -n "$url" ] && [ -n "$interval" ]; then
+            if run_script_command "set-url-interval" "\"$url\"" "$interval"; then
+                json_response "true" "Interval updated successfully"
+            else
+                json_response "false" "Failed to update interval"
+            fi
+        else
+            json_response "false" "URL and interval parameters required"
+        fi
+        ;;
+        
+    "test-url")
+        url=$(url_decode "$(get_param "url")")
+        if [ -n "$url" ]; then
+            status=$(get_url_status "$url" 10)
+            if [ "$status" = "online" ]; then
+                json_response "true" "URL is accessible" '{"accessible":true}'
+            else
+                json_response "true" "URL is not accessible" '{"accessible":false}'
+            fi
+        else
+            json_response "false" "URL parameter required"
+        fi
+        ;;
+        
+    "start")
+        if run_script_command "start"; then
+            json_response "true" "Service started"
+        else
+            json_response "false" "Failed to start service"
+        fi
+        ;;
+        
+    "stop")
+        if run_script_command "stop"; then
+            json_response "true" "Service stopped"
+        else
+            json_response "false" "Failed to stop service"
+        fi
+        ;;
+        
+    "restart")
+        if run_script_command "restart"; then
+            json_response "true" "Service restarted"
+        else
+            json_response "false" "Failed to restart service"
+        fi
+        ;;
+        
+    "debug")
+        # Debug endpoint to check system status
+        debug_info="Script: $SCRIPT_PATH|Config: $CONFIG_FILE|Log: $LOG_FILE"
+        if [ -f "$DEBUG_LOG" ]; then
+            debug_info="$debug_info|Debug: $(tail -5 "$DEBUG_LOG" | tr '\n' ';')"
+        fi
+        escaped_debug=$(json_escape "$debug_info")
+        json_response "true" "Debug info retrieved" "{\"info\":\"$escaped_debug\"}"
+        ;;
+        
+    *)
+        log_error "Unknown action: $ACTION"
+        json_response "false" "Unknown action: $ACTION"
+        ;;
+esac
