@@ -4,11 +4,14 @@
 
 ## 🌟 Features
 
-- ✅ **Simple Web Interface**: Direct SSH command generator (no CGI issues)
+- ✅ **Multiple URLs Support**: একসাথে অনেক website monitor করা যায়
+- ✅ **Per-URL Intervals**: আলাদা আলাদা website এর জন্য আলাদা timing
+- ✅ **Auto-Restart Service**: URL add/remove করলে service automatic restart হয়
+- ✅ **Real-time Status**: URL accessible কিনা real-time check করে
+- ✅ **Smart Retry Logic**: ব্যর্থ হলে নির্দিষ্ট সংখ্যকবার পুনরায় চেষ্টা করে
 - ✅ **Background Service**: Console রাখার দরকার নেই, background এ চলে
 - ✅ **Auto-Start on Boot**: Router restart হলে automatically শুরু হয়
-- ✅ **Per-URL Intervals**: আলাদা আলাদা website এর জন্য আলাদা timing
-- ✅ **Smart Retry Logic**: ব্যর্থ হলে নির্দিষ্ট সংখ্যকবার পুনরায় চেষ্টা করে
+- ✅ **Simple Web Interface**: Direct SSH command generator (no CGI issues)
 - ✅ **OpenWrt Integration**: OpenWrt রাউটারের সাথে সম্পূর্ণভাবে সামঞ্জস্যপূর্ণ
 - ✅ **Service Management**: systemd-style service control
 - ✅ **Configurable Settings**: সহজ কনফিগারেশন ফাইল
@@ -126,21 +129,32 @@ page-reloader logs
 page-reloader list-urls
 ```
 
-### 🔗 URL Management
+### 🔗 URL Management (Multiple URLs Support)
 
 ```bash
-# Add URLs
+# Add multiple URLs
+page-reloader add-url "https://tasktreasure-otp1.onrender.com"
+page-reloader add-url "https://templinepy-6j1r.onrender.com"
 page-reloader add-url "https://example.com"
-page-reloader add-url "https://google.com"
 
-# Remove URL
+# Remove specific URL
 page-reloader remove-url "https://example.com"
+
+# List all configured URLs with status
+page-reloader list-urls
 
 # Clear all URLs
 page-reloader clear-urls
 
-# Set custom interval for specific URL
-page-reloader set-url-interval "https://example.com" 300  # 5 minutes
+# ✨ NEW: Set custom interval for specific URL
+page-reloader set-url-interval "https://tasktreasure-otp1.onrender.com" 600   # 10 minutes
+page-reloader set-url-interval "https://templinepy-6j1r.onrender.com" 300     # 5 minutes
+
+# Test all URLs manually
+page-reloader test
+
+# Auto-restart service when URLs added
+# Service automatically restarts and applies new URLs
 ```
 
 ### ⏰ Timing Control
